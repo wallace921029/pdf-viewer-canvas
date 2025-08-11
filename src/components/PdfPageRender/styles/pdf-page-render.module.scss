@@ -1,0 +1,11 @@
+.pdfPageRender {
+    width: 100%;
+    margin-top: 24px;
+    display: flex;
+    position: relative;
+
+    canvas {
+        margin: 0 auto;
+
+    }
+}

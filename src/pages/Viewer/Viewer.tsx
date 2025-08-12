@@ -6,11 +6,11 @@ import * as pdfjsLib from "pdfjs-dist";
 import workerUrl from "pdfjs-dist/build/pdf.worker.min?url";
 import { useEffect, useState } from "react";
 import PdfPageRender from "@/components/PdfPageRender/PdfPageRender";
+import demoFile from "@/assets/demo.pdf?url";
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = workerUrl;
 
-const fileUrl =
-  "http://36.134.52.8:9000/smart-report-file/c718d4a6908a4805a84eefd746930c3f.pdf?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=admin%2F20250812%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20250812T091251Z&X-Amz-Expires=7200&X-Amz-SignedHeaders=host&X-Amz-Signature=0536fbd26c8565ff3d77dd426d0bf9170e804162a946f3795d2b65352753f251";
+const fileUrl = demoFile;
 
 function Viewer() {
   const [pdfLayers, setPdfLayers] = useState<

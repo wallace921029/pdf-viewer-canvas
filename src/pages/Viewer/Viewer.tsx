@@ -1,4 +1,5 @@
 import styles from "./styles/viewer.module.scss";
+
 import PageTitle from "./components/PageTitle/PageTitle";
 import Toolbar from "./components/Toolbar/Toolbar";
 import * as pdfjsLib from "pdfjs-dist";
@@ -9,13 +10,18 @@ import PdfPageRender from "@/components/PdfPageRender/PdfPageRender";
 pdfjsLib.GlobalWorkerOptions.workerSrc = workerUrl;
 
 const fileUrl =
-  "http://36.134.52.8:9000/smart-report-file/c718d4a6908a4805a84eefd746930c3f.pdf?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=admin%2F20250811%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20250811T091629Z&X-Amz-Expires=7200&X-Amz-SignedHeaders=host&X-Amz-Signature=e9e4a31a220a56027cc77ae307fe10ffcd38d36c18223ed3e8fc9e7a47ea7187";
+  "http://36.134.52.8:9000/smart-report-file/c718d4a6908a4805a84eefd746930c3f.pdf?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=admin%2F20250812%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20250812T091251Z&X-Amz-Expires=7200&X-Amz-SignedHeaders=host&X-Amz-Signature=0536fbd26c8565ff3d77dd426d0bf9170e804162a946f3795d2b65352753f251";
 
 function Viewer() {
-  const [canvasLayers, setCanvasLayers] = useState<HTMLCanvasElement[]>([]);
-  const [textLayers, setTextLayers] = useState<HTMLDivElement[]>([]);
-  const [annotationLayers, setAnnotationLayers] = useState<HTMLCanvasElement[]>([]);
+  const [pdfLayers, setPdfLayers] = useState<
+    {
+      canvasLayers: HTMLCanvasElement;
+      textLayers?: HTMLDivElement;
+      annotationLayers?: HTMLCanvasElement;
+    }[]
+  >([]);
 
+  // load PDF content and render pages
   const loadPdf = async (url: string) => {
     const loadingTask = pdfjsLib.getDocument(url);
     const pdf = await loadingTask.promise;
@@ -23,11 +29,17 @@ function Viewer() {
     console.log("> pdf pages");
     console.log(pdf.numPages);
 
-    const pages: HTMLCanvasElement[] = [];
+    const pages: {
+      canvasLayers: HTMLCanvasElement;
+      textLayers?: HTMLDivElement;
+      annotationLayers?: HTMLCanvasElement;
+    }[] = [];
+
     for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
       const page = await pdf.getPage(pageNum);
       const viewport = page.getViewport({ scale: 1.5 });
 
+      // canvas layer
       const canvas = document.createElement("canvas");
       const context = canvas.getContext("2d");
       if (!context) {
@@ -42,10 +54,42 @@ function Viewer() {
         viewport: viewport,
       }).promise;
 
-      pages.push(canvas);
+      // text layer
+      const textLayerDiv = document.createElement("div");
+      textLayerDiv.style.position = "absolute";
+      textLayerDiv.style.left = "0";
+      textLayerDiv.style.top = "0";
+      textLayerDiv.style.width = `${viewport.width}px`;
+      textLayerDiv.style.height = `${viewport.height}px`;
+
+      const textContent = await page.getTextContent();
+
+      const textLayer = new pdfjsLib.TextLayer({
+        textContentSource: textContent,
+        container: textLayerDiv,
+        viewport: viewport,
+      });
+
+      await textLayer.render();
+
+      // annotation layer
+      const annotationLayerCanvas = document.createElement("canvas");
+      const annotationLayerContext = annotationLayerCanvas.getContext("2d");
+      if (!annotationLayerContext) {
+        throw new Error("无法获取annotationLayerCanvas上下文");
+      }
+      annotationLayerCanvas.height = viewport.height;
+      annotationLayerCanvas.width = viewport.width;
+      annotationLayerCanvas.style.pointerEvents = "none";
+
+      pages.push({
+        canvasLayers: canvas,
+        textLayers: textLayerDiv,
+        annotationLayers: annotationLayerCanvas,
+      });
     }
 
-    setCanvasLayers(pages);
+    setPdfLayers(pages);
   };
 
   useEffect(() => {
@@ -57,8 +101,8 @@ function Viewer() {
 
   useEffect(() => {
     console.log("> loadPdf successfully");
-    console.log(canvasLayers);
-  }, [canvasLayers]);
+    console.log(pdfLayers);
+  }, [pdfLayers]);
 
   return (
     <div className={styles.viewer}>
@@ -71,12 +115,12 @@ function Viewer() {
       </div>
 
       <div className={styles.viewerContainer}>
-        {canvasLayers.map((page, index) => (
+        {pdfLayers.map((pdfLayer, pdfLayerIndex) => (
           <PdfPageRender
-            key={index}
-            canvasLayer={page}
-            textLayer={undefined}
-            annotationLayer={undefined}
+            key={pdfLayerIndex}
+            canvasLayer={pdfLayer.canvasLayers}
+            textLayer={pdfLayer.textLayers}
+            annotationLayer={pdfLayer.annotationLayers}
           />
         ))}
       </div>

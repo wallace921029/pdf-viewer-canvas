@@ -1,11 +1,6 @@
+@use "pdfjs-dist/web/pdf_viewer.css";
+
 .pdfPageRender {
-    width: 100%;
-    margin-top: 24px;
-    display: flex;
+    margin: 16px auto;
     position: relative;
-
-    canvas {
-        margin: 0 auto;
-
-    }
 }

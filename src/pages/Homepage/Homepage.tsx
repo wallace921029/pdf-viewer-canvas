@@ -8,6 +8,9 @@ function Homepage() {
     <div>
       <h1>Homepage</h1>
       <Button onClick={() => navigate("/viewer")}>Go to Viewer</Button>
+      <Button onClick={() => navigate("/fabric-demo")}>
+        Go to Fabric Demo
+      </Button>
     </div>
   );
 }

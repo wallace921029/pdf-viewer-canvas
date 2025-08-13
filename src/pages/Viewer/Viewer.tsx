@@ -1,4 +1,5 @@
 import styles from "./styles/viewer.module.scss";
+import "pdfjs-dist/web/pdf_viewer.css";
 
 import PageTitle from "./components/PageTitle/PageTitle";
 import Toolbar from "./components/Toolbar/Toolbar";
@@ -7,106 +8,77 @@ import workerUrl from "pdfjs-dist/build/pdf.worker.min?url";
 import { useEffect, useState } from "react";
 import PdfPageRender from "@/components/PdfPageRender/PdfPageRender";
 import demoFile from "@/assets/demo.pdf?url";
+import type { PageLayer } from "./types";
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = workerUrl;
 
-const fileUrl = demoFile;
-
 function Viewer() {
-  const [pdfLayers, setPdfLayers] = useState<
-    {
-      canvasLayers: HTMLCanvasElement;
-      textLayers?: HTMLDivElement;
-      annotationLayers?: HTMLCanvasElement;
-    }[]
-  >([]);
+  const fileUrl = demoFile;
+
+  const [viewSize, setViewSize] = useState({ width: 0, height: 0 });
+  const [pageLayers, setPageLayers] = useState<PageLayer[]>([]);
 
   // load PDF content and render pages
   const loadPdf = async (url: string) => {
     const loadingTask = pdfjsLib.getDocument(url);
     const pdf = await loadingTask.promise;
 
-    console.log("> pdf pages");
-    console.log(pdf.numPages);
-
-    const pages: {
-      canvasLayers: HTMLCanvasElement;
-      textLayers?: HTMLDivElement;
-      annotationLayers?: HTMLCanvasElement;
-    }[] = [];
+    const tempPageLayers: PageLayer[] = [];
 
     for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
       const page = await pdf.getPage(pageNum);
       const viewport = page.getViewport({ scale: 1.5 });
+      setViewSize({ width: viewport.width, height: viewport.height });
 
-      // canvas layer
-      const canvas = document.createElement("canvas");
-      const context = canvas.getContext("2d");
+      // image layer
+      const pageImageCanvas = document.createElement("canvas");
+      const context = pageImageCanvas.getContext("2d");
       if (!context) {
         throw new Error("无法获取canvas上下文");
       }
-      canvas.height = viewport.height;
-      canvas.width = viewport.width;
+      pageImageCanvas.height = viewport.height;
+      pageImageCanvas.width = viewport.width;
 
       await page.render({
         canvasContext: context,
-        canvas: canvas,
+        canvas: pageImageCanvas,
         viewport: viewport,
       }).promise;
 
       // text layer
-      const textLayerDiv = document.createElement("div");
-      textLayerDiv.style.position = "absolute";
-      textLayerDiv.style.left = "0";
-      textLayerDiv.style.top = "0";
-      textLayerDiv.style.width = `${viewport.width}px`;
-      textLayerDiv.style.height = `${viewport.height}px`;
+      const pageTextDiv = document.createElement("div");
+      pageTextDiv.style.position = "absolute";
+      pageTextDiv.style.left = "0";
+      pageTextDiv.style.top = "0";
 
       const textContent = await page.getTextContent();
 
       const textLayer = new pdfjsLib.TextLayer({
         textContentSource: textContent,
-        container: textLayerDiv,
+        container: pageTextDiv,
         viewport: viewport,
       });
 
       await textLayer.render();
 
-      // annotation layer
-      const annotationLayerCanvas = document.createElement("canvas");
-      const annotationLayerContext = annotationLayerCanvas.getContext("2d");
-
-      if (!annotationLayerContext) {
-        throw new Error("无法获取annotationLayerCanvas上下文");
-      }
-      annotationLayerCanvas.height = viewport.height;
-      annotationLayerCanvas.width = viewport.width;
-      annotationLayerCanvas.style.pointerEvents = "none";
-
-      pages.push({
-        canvasLayers: canvas,
-        textLayers: textLayerDiv,
-        annotationLayers: annotationLayerCanvas,
+      tempPageLayers.push({
+        imageCanvas: pageImageCanvas,
+        textDiv: pageTextDiv,
       });
     }
 
-    setPdfLayers(pages);
+    setPageLayers(tempPageLayers);
   };
 
   useEffect(() => {
     loadPdf(fileUrl).catch((error) => {
-      console.error("> loadPdf error");
+      console.error("> PDF loading error");
       console.error(error);
     });
   }, [fileUrl]);
 
-  useEffect(() => {
-    console.log("> loadPdf successfully");
-    console.log(pdfLayers);
-  }, [pdfLayers]);
-
   return (
-    <div className={styles.viewer}>
+    <div className={`${styles.viewer}`}>
       <div className={styles.pageTitleContainer}>
         <PageTitle />
       </div>
@@ -115,13 +87,13 @@ function Viewer() {
         <Toolbar />
       </div>
 
-      <div className={styles.viewerContainer}>
-        {pdfLayers.map((pdfLayer, pdfLayerIndex) => (
+      <div className={`${styles.viewerContainer} pdfViewer`} id="viewer">
+        {pageLayers.map((pageLayer, pageLayerIndex) => (
           <PdfPageRender
-            key={pdfLayerIndex}
-            canvasLayer={pdfLayer.canvasLayers}
-            textLayer={pdfLayer.textLayers}
-            annotationLayer={pdfLayer.annotationLayers}
+            key={pageLayerIndex}
+            viewSize={viewSize}
+            imageCanvas={pageLayer.imageCanvas}
+            textDiv={pageLayer.textDiv}
           />
         ))}
       </div>

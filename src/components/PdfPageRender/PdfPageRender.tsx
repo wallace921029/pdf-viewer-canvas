@@ -24,7 +24,7 @@ function PdfPageRender({ viewSize, imageCanvas, textDiv }: Props) {
       textDiv.style.height = `${viewSize.height}px`;
       containerRef.current.appendChild(textDiv);
     }
-  }, [imageCanvas, textDiv]);
+  }, [viewSize, imageCanvas, textDiv]);
 
   return (
     <div

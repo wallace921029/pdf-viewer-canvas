@@ -75,6 +75,7 @@ function Viewer() {
       // annotation layer
       const annotationLayerCanvas = document.createElement("canvas");
       const annotationLayerContext = annotationLayerCanvas.getContext("2d");
+
       if (!annotationLayerContext) {
         throw new Error("无法获取annotationLayerCanvas上下文");
       }

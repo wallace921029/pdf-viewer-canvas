@@ -2,65 +2,32 @@ import styles from "./styles/pdf-page-render.module.scss";
 import "pdfjs-dist/web/pdf_viewer.css";
 
 import { useEffect, useRef } from "react";
+import * as fabric from "fabric";
 
 interface Props {
   canvasLayer: HTMLCanvasElement;
   textLayer?: HTMLDivElement;
-  annotationLayer?: HTMLDivElement | HTMLCanvasElement;
+  annotationLayer?: HTMLCanvasElement;
 }
 
 function PdfPageRender({ canvasLayer, textLayer, annotationLayer }: Props) {
   const layerContainerRef = useRef<HTMLDivElement>(null);
+  const fabricCanvasRef = useRef<fabric.Canvas | null>(null);
 
   // event listener for text range selection
   const handleTextRangeSelection = (event: MouseEvent) => {
-    const selection = window.getSelection();
-    console.log("> selection");
-    console.log(selection);
-
-    if (selection && selection.rangeCount > 0) {
-      const range = selection.getRangeAt(0);
-      console.log("> range");
-      console.log(range);
-
-      console.log("> range.getBoundingClientRect ");
-      console.log(range.getClientRects());
-
-      const parentRect = textLayer!.getBoundingClientRect();
-
-      const rects = Array.from(range.getClientRects())
-        .map((rect) => ({
-          left: rect.left - parentRect.left,
-          top: rect.top - parentRect.top,
-          width: rect.width,
-          height: rect.height,
-        }))
-        .filter(
-          (rect) =>
-            rect.width > 0 && rect.height > 0 && rect.left > 0 && rect.top > 0
-        );
-
-      console.log("> rects");
-      console.log(rects);
-
-      for (const rect of rects) {
-        drawRect(rect);
-      }
-    }
-  };
-
-  const drawRect = (rect: {
-    left: number;
-    top: number;
-    width: number;
-    height: number;
-  }) => {
-    const ctx = (annotationLayer as HTMLCanvasElement).getContext("2d");
-    if (!ctx) {
-      throw new Error("无法获取annotationLayer上下文");
-    }
-    ctx.fillStyle = "rgba(255, 0, 0, 0.3)";
-    ctx.fillRect(rect.left, rect.top, rect.width, rect.height);
+    // const rect = new fabric.Rect({
+    //   left: 0,
+    //   top: 0,
+    //   width: 100,
+    //   height: 100,
+    //   fill: "rgba(0,0,255,0.3)",
+    //   stroke: "blue",
+    //   selectable: true,
+    //   hasControls: true,
+    // });
+    // fabricCanvasRef.current?.add(rect);
+    fabricCanvasRef.current!.lowerCanvasEl.style.pointerEvents = "auto";
   };
 
   useEffect(() => {
@@ -77,6 +44,28 @@ function PdfPageRender({ canvasLayer, textLayer, annotationLayer }: Props) {
 
       if (annotationLayer) {
         annotationLayer.classList.add("annotationLayer");
+
+        if (fabricCanvasRef.current) {
+          fabricCanvasRef.current.dispose();
+        }
+
+        const canvas = new fabric.Canvas(annotationLayer);
+        fabricCanvasRef.current = canvas;
+
+        // test rect
+        const rect = new fabric.Rect({
+          left: 0,
+          top: 0,
+          width: 100,
+          height: 100,
+          fill: "rgba(0,0,255,0.3)",
+          stroke: "blue",
+          selectable: true,
+          hasControls: true,
+        });
+        fabricCanvasRef.current?.add(rect);
+        fabricCanvasRef.current!.lowerCanvasEl.style.pointerEvents = "auto";
+
         layerContainer.appendChild(annotationLayer);
       }
 
@@ -100,7 +89,7 @@ function PdfPageRender({ canvasLayer, textLayer, annotationLayer }: Props) {
       <div
         style={{ position: "relative", margin: "0 auto" }}
         ref={layerContainerRef}
-      ></div>
+      />
     </div>
   );
 }

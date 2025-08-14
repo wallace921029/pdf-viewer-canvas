@@ -2,6 +2,7 @@ import { createBrowserRouter } from "react-router";
 import Homepage from "@/pages/Homepage/Homepage";
 import Viewer from "@/pages/Viewer/Viewer";
 import FabricDemo from "@/pages/FabricDemo/FabricDemo";
+import ToolContextProvider from "@/pages/Viewer/context/ToolContext";
 
 const router = createBrowserRouter([
   {
@@ -10,7 +11,11 @@ const router = createBrowserRouter([
   },
   {
     path: "/viewer",
-    Component: Viewer,
+    Component: () => (
+      <ToolContextProvider>
+        <Viewer />
+      </ToolContextProvider>
+    ),
   },
   {
     path: "/fabric-demo",

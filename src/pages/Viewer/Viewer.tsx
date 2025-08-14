@@ -7,7 +7,7 @@ import * as pdfjsLib from "pdfjs-dist";
 import workerUrl from "pdfjs-dist/build/pdf.worker.min?url";
 import { useEffect, useState } from "react";
 import PdfPageRender from "@/components/PdfPageRender/PdfPageRender";
-import demoFile from "@/assets/demo.pdf?url";
+import demoFile from "@/assets/冯少桐-07班-循环和呼吸功能调节综合实验.pdf?url";
 import type { PageLayer } from "./types";
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = workerUrl;

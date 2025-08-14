@@ -1,7 +1,8 @@
 import styles from "./styles/pdf-page-render.module.scss";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useContext, useEffect, useRef, useState } from "react";
 import * as fabric from "fabric";
-import * as lodash from "lodash";
+import { ToolContext } from "@/pages/Viewer/context/ToolContext";
+import { mergeRectsIntoLines } from "@/tools/merge-horizontal-rect";
 
 interface Props {
   viewSize: { width: number; height: number };
@@ -12,29 +13,66 @@ interface Props {
 function PdfPageRender({ viewSize, imageCanvas, textDiv }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const fabricCanvas = useRef<fabric.Canvas | null>(null);
-  const trashIconRef = useRef<fabric.FabricText | null>(null);
-  const trashTargetRef = useRef<fabric.FabricObject | null>(null);
-
+  const d = [
+    [
+      483.79754638671875, 397.57733154296875, 504.9865417480469,
+      408.07733154296875,
+    ],
+    [
+      90.0999984741211, 420.9773254394531, 132.47799682617188,
+      431.4773254394531,
+    ],
+  ];
   const [annotationData, setAnnotationData] = useState<any[]>([
-    // {
-    //   id: "1",
-    //   group: [
-    //     {
-    //       type: "rect",
-    //       options: {
-    //         left: 100,
-    //         top: 100,
-    //         fill: "rgba(255, 0, 0, 0.5)",
-    //         width: 50,
-    //         height: 50,
-    //         hasControls: false,
-    //       },
-    //     },
-    //   ],
-    // },
+    {
+      id: 1755168610666,
+      selectedText: "制解析",
+      group: [
+        {
+          type: "rect",
+          options: {
+            left: 427.03761291503906,
+            top: 595.7291870117188,
+            fill: "rgba(255, 0, 0, .3)",
+            width: 48.6417236328125,
+            height: 18,
+            hasControls: false,
+          },
+        },
+      ],
+    },
+    {
+      id: Date.now(),
+      selectedText: "家兔气管插管",
+      group: [
+        {
+          type: "rect",
+          options: {
+            left: 483.79754638671875 * 1.5,
+            top: 397.57733154296875 * 1.5,
+            fill: "rgba(148, 0, 211, .3)",
+            width: 21.188995361328125 * 1.5,
+            height: 10.5 * 1.5,
+          },
+        },
+        {
+          type: "rect",
+          options: {
+            left: 90.0999984741211 * 1.5,
+            top: 420.9773254394531 * 1.5,
+            fill: "rgba(148, 0, 211, .3)",
+            width: 42.37899835205078 * 1.5,
+            height: 10.5 * 1.5,
+          },
+        },
+      ],
+    },
   ]);
 
-  const setFabricCanvasPointerEvents = (value: "auto" | "none") => {
+  const toolCtx = useContext(ToolContext);
+
+  // Set fabric canvas pointer events
+  const setFabricCanvasPointerEvents = useCallback((value: "auto" | "none") => {
     if (!fabricCanvas.current) return;
 
     if (fabricCanvas.current.lowerCanvasEl) {
@@ -46,17 +84,25 @@ function PdfPageRender({ viewSize, imageCanvas, textDiv }: Props) {
     if (fabricCanvas.current.upperCanvasEl) {
       fabricCanvas.current.upperCanvasEl.style.pointerEvents = value;
     }
-  };
+  }, []);
 
   // Draw rectangle on annotation layer
-  const drawAnnotations = () => {
+  const drawAnnotations = useCallback(() => {
     if (!fabricCanvas.current) return;
 
-    const group = new fabric.Group();
-    console.log("annotationData");
-    console.log(annotationData);
+    fabricCanvas.current?.clear();
+
     annotationData.forEach((annotation) => {
-      annotation.group.forEach((item) => {
+      const group = new fabric.Group([], {
+        hasControls: false,
+        lockMovementX: true,
+        lockMovementY: true,
+        meta: {
+          ...annotation,
+        },
+      } as any);
+
+      annotation.group.forEach((item: any) => {
         if (item.type === "rect") {
           const rect = new fabric.Rect({
             left: item.options.left,
@@ -69,183 +115,196 @@ function PdfPageRender({ viewSize, imageCanvas, textDiv }: Props) {
           group.add(rect);
         }
       });
+      fabricCanvas.current?.add(group);
     });
-    fabricCanvas.current?.clear();
-    fabricCanvas.current?.add(group);
+
     fabricCanvas.current?.renderAll();
-  };
+  }, [annotationData]);
 
-  const enableGroupClickDelete = () => {
-    if (!fabricCanvas.current) return;
-    console.log("123");
-    fabricCanvas.current.on("mouse:down", (event) => {
-      const target = event.target;
-      console.log("> event.target", event.target);
-      if (target && target.type === "group") {
-        fabricCanvas.current?.remove(target);
-        fabricCanvas.current?.discardActiveObject();
-        fabricCanvas.current?.requestRenderAll();
+  // Handle erasing annotations
+  const handleErase = (event: any) => {
+    const target = event.target;
+
+    console.log("Erase target:", target);
+    if (target && target.type === "group") {
+      fabricCanvas.current?.remove(target);
+      fabricCanvas.current?.discardActiveObject();
+      fabricCanvas.current?.requestRenderAll();
+      // Clear selection
+      const selection = document.getSelection();
+      if (selection) {
+        selection.removeAllRanges();
       }
-    });
+    }
   };
 
-  const handleMouseUp = () => {
-    const selection = document.getSelection();
+  const enableGroupClickDelete = useCallback((enable = true) => {
+    if (!fabricCanvas.current) return;
 
-    if (!selection) return;
+    fabricCanvas.current.off("mouse:down", handleErase);
 
-    // 1. 检查是否有选中文本
-    if (!selection.rangeCount || selection.toString().length === 0) {
-      console.log("No text selected");
-      // 可以在这里触发“取消选中”逻辑
-      return;
-    }
+    if (enable) fabricCanvas.current.on("mouse:down", handleErase);
+  }, []);
 
-    // 2. 获取选区的 Range
-    const range = selection.getRangeAt(0);
+  // for selecting text
+  const handleMouseUp = useCallback(
+    (event: MouseEvent) => {
+      if (toolCtx?.currentTool.id !== "brush") return;
 
-    // 3. 检查选区是否完全在 textDiv 内部
-    if (!textDiv.contains(range.commonAncestorContainer)) {
-      console.log("Selection is not within the target container");
-      return;
-    }
+      // check if the click position is within the textDiv
+      if (!textDiv.contains(event.target as Node)) return;
 
-    // 4. 获取选区的所有视觉矩形 (ClientRectList)
-    // 这是关键！getClientRects() 返回一个类似数组的 ClientRectList
-    const clientRects = range.getClientRects();
+      const selection = document.getSelection();
 
-    // 5. 获取 textDiv 相对于其包含块（通常是视口）的边界
-    // 我们需要这个来将选区矩形的坐标转换为相对于 textDiv 的坐标
-    const textDivRect = textDiv.getBoundingClientRect();
+      if (!selection) return;
 
-    // 6. 存储每一行的信息
-    const linesInfo = [];
+      // 1. 检查是否有选中文本
+      if (!selection.rangeCount || selection.toString().length === 0) {
+        console.log("No text selected");
+        return;
+      }
 
-    // 7. 遍历每一个矩形 (每个矩形通常代表选区的一行或一个片段)
-    for (let i = 0; i < clientRects.length; i++) {
-      const rect = clientRects[i];
+      // 2. 获取选区的 Range
+      const range = selection.getRangeAt(0);
+      const selectedText = range.toString();
 
-      // 8. 计算相对于 textDiv 的坐标
-      // 减去 textDiv 在视口中的 left/top
-      const relativeLeft = rect.left - textDivRect.left;
-      const relativeTop = rect.top - textDivRect.top;
-      const relativeRight = rect.right - textDivRect.left;
-      const relativeBottom = rect.bottom - textDivRect.top;
+      // 3. 检查选区是否完全在 textDiv 内部
+      if (!textDiv.contains(range.commonAncestorContainer)) {
+        console.log("Out of page.");
+        return;
+      }
 
-      // 9. 计算相对于 textDiv 的宽高
-      // 宽度和高度本身是绝对的，但坐标是相对的
-      const width = rect.width;
-      const height = rect.height;
+      // 4. 获取选区的所有视觉矩形 (ClientRectList)
+      // 这是关键！getClientRects() 返回一个类似数组的 ClientRectList
+      const clientRects = range.getClientRects();
 
-      // 10. 将信息存入数组
-      // 你可以根据需要调整存储的属性
-      linesInfo.push({
-        index: i, // 行索引
-        left: relativeLeft,
-        top: relativeTop,
-        right: relativeRight, // 有时 right 比 left + width 更精确（处理 sub-pixel）
-        bottom: relativeBottom,
-        width: width,
-        height: height,
-        // 可选：存储绝对坐标
-        // absolute: { left: rect.left, top: rect.top, width, height }
-      });
-    }
+      // 5. 获取 textDiv 相对于其包含块（通常是视口）的边界
+      // 我们需要这个来将选区矩形的坐标转换为相对于 textDiv 的坐标
+      const textDivRect = textDiv.getBoundingClientRect();
 
-    // 11. 输出或使用结果
-    console.log("Selected lines info relative to textDiv:", linesInfo);
-    const rectGroup = {
-      id: "",
-      group: linesInfo.map((line) => {
-        return {
-          type: "rect",
-          options: {
-            left: line.left,
-            top: line.top,
-            fill: "rgba(255, 0, 0, 0.5)",
-            width: line.width,
-            height: line.height,
-            hasControls: false,
-          },
-        };
-      }),
-    };
+      // 6. 存储每一块的信息
+      const linesInfo = [];
 
-    setAnnotationData((prevValue) => [...prevValue, rectGroup]);
-  };
+      // 7. 遍历每一个矩形 (每个矩形通常代表选区的一行或一个片段)
+      for (let i = 0; i < clientRects.length; i++) {
+        const rect = clientRects[i];
+
+        // 8. 计算相对于 textDiv 的坐标
+        // 减去 textDiv 在视口中的 left/top
+        const relativeLeft = rect.left - textDivRect.left;
+        const relativeTop = rect.top - textDivRect.top;
+
+        // 9. 计算相对于 textDiv 的宽高
+        // 宽度和高度本身是绝对的，但坐标是相对的
+        const width = rect.width;
+        const height = rect.height;
+
+        // 10. 将信息存入数组
+        // 你可以根据需要调整存储的属性
+        if (width > 0) {
+          linesInfo.push({
+            left: relativeLeft,
+            top: relativeTop,
+            width: width,
+            height: height,
+          });
+        }
+      }
+
+      // 11. 输出或使用结果
+      const mergedLines = mergeRectsIntoLines(linesInfo, 5);
+      const rectGroup = {
+        id: Date.now(),
+        selectedText,
+        group: mergedLines.map((line) => {
+          console.log("toolCtx.currentTool.color", toolCtx.currentTool.color);
+          return {
+            type: "rect",
+            options: {
+              left: line.left,
+              top: line.top,
+              fill: toolCtx.currentTool.color,
+              width: line.width,
+              height: line.height,
+              hasControls: false,
+            },
+          };
+        }),
+      };
+
+      setAnnotationData((prevValue) => [...prevValue, rectGroup]);
+    },
+    [textDiv, toolCtx]
+  );
 
   useEffect(() => {
-    if (containerRef.current) {
-      // clear the container
-      containerRef.current.innerHTML = "";
+    if (!containerRef.current) return;
 
-      // image layer
-      containerRef.current.appendChild(imageCanvas);
+    // clear the container
+    containerRef.current.innerHTML = "";
 
-      // text layer
-      textDiv.classList.add("textLayer");
-      textDiv.style.width = `${viewSize.width}px`;
-      textDiv.style.height = `${viewSize.height}px`;
-      containerRef.current.appendChild(textDiv);
+    // image layer
+    containerRef.current.appendChild(imageCanvas);
 
-      // annotation layer
-      const annotationCanvas = document.createElement("canvas");
-      annotationCanvas.width = viewSize.width;
-      annotationCanvas.height = viewSize.height;
-      annotationCanvas.style.position = "absolute";
-      annotationCanvas.style.left = "0";
-      annotationCanvas.style.top = "0";
-      annotationCanvas.style.pointerEvents = "none";
-      containerRef.current.appendChild(annotationCanvas);
+    // text layer
+    textDiv.classList.add("textLayer");
+    textDiv.style.width = `${viewSize.width}px`;
+    textDiv.style.height = `${viewSize.height}px`;
+    containerRef.current.appendChild(textDiv);
 
-      fabricCanvas.current = new fabric.Canvas(annotationCanvas, {
-        width: viewSize.width,
-        height: viewSize.height,
-      });
-      fabricCanvas.current.wrapperEl.style.position = "absolute";
-      fabricCanvas.current.wrapperEl.style.left = "0";
-      fabricCanvas.current.wrapperEl.style.top = "0";
-      setFabricCanvasPointerEvents("none");
+    // annotation layer
+    const annotationCanvas = document.createElement("canvas");
+    annotationCanvas.width = viewSize.width;
+    annotationCanvas.height = viewSize.height;
+    annotationCanvas.style.position = "absolute";
+    annotationCanvas.style.left = "0";
+    annotationCanvas.style.top = "0";
+    annotationCanvas.style.pointerEvents = "none";
+    containerRef.current.appendChild(annotationCanvas);
 
-      // Events
-      fabricCanvas.current.on("mouse:over", (e) => {
-        if (e.target && e.target.type === "rect") {
-          showTrashIcon(e.target as fabric.FabricObject);
-        }
-      });
-
-      fabricCanvas.current.on("mouse:out", (e) => {
-        if (e.target && e.target.type === "rect") {
-          hideTrashIcon();
-        }
-      });
-
-      fabricCanvas.current.on("mouse:down", (e) => {
-        if (trashIconRef.current && e.target === trashIconRef.current) {
-          if (trashTargetRef.current) {
-            fabricCanvas.current!.remove(trashTargetRef.current);
-          }
-          hideTrashIcon();
-          setFabricCanvasPointerEvents("none");
-          fabricCanvas.current!.renderAll();
-        }
-      });
-    }
+    fabricCanvas.current = new fabric.Canvas(annotationCanvas, {
+      width: viewSize.width,
+      height: viewSize.height,
+    });
+    fabricCanvas.current.wrapperEl.style.position = "absolute";
+    fabricCanvas.current.wrapperEl.style.left = "0";
+    fabricCanvas.current.wrapperEl.style.top = "0";
+    setFabricCanvasPointerEvents("none");
   }, [viewSize, imageCanvas, textDiv]);
 
   useEffect(() => {
     drawAnnotations();
-  }, [annotationData, fabricCanvas]);
+  }, [drawAnnotations]);
 
   useEffect(() => {
-    enableGroupClickDelete();
-
+    document.removeEventListener("mouseup", handleMouseUp);
     document.addEventListener("mouseup", handleMouseUp);
 
     return () => {
       document.removeEventListener("mouseup", handleMouseUp);
     };
-  }, []);
+  }, [handleMouseUp]);
+
+  useEffect(() => {
+    if (
+      toolCtx?.currentTool.id === "cursor" ||
+      toolCtx?.currentTool.id === "brush"
+    ) {
+      setFabricCanvasPointerEvents("none");
+    } else {
+      setFabricCanvasPointerEvents("auto");
+    }
+
+    if (toolCtx?.currentTool.id === "eraser") {
+      enableGroupClickDelete();
+    } else {
+      enableGroupClickDelete(false);
+    }
+  }, [
+    toolCtx?.currentTool,
+    setFabricCanvasPointerEvents,
+    enableGroupClickDelete,
+  ]);
 
   return (
     <div

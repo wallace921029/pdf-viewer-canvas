@@ -1,29 +1,31 @@
 import styles from "./styles/palette.module.scss";
 
-import { useEffect, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import paletteSVG from "@/assets/svg/palette.svg";
+import { ToolContext } from "../../context/ToolContext";
 
 interface Props {
-  onColorChange: (color: string) => void;
+  setSelectedColor: (color: string) => void;
 }
 
 // rainbow colors
 const paletteColors = [
-  "#FF0000",
-  "#FF7F00",
-  "#FFFF00",
-  "#00FF00",
-  "#0000FF",
-  "#4B0082",
-  "#9400D3",
+  "rgba(255, 0, 0, .3)",
+  "rgba(255, 127, 0, .3)",
+  "rgba(255, 255, 0, .3)",
+  "rgba(0, 255, 0, .3)",
+  "rgba(0, 0, 255, .3)",
+  "rgba(75, 0, 130, .3)",
+  "rgba(148, 0, 211, .3)",
 ];
 
-function Palette({ onColorChange }: Props) {
+function Palette({ setSelectedColor }: Props) {
   const [currentColor, setCurrentColor] = useState(paletteColors[0]);
+  const toolCtx = useContext(ToolContext);
 
   useEffect(() => {
-    onColorChange(currentColor);
-  }, [currentColor]);
+    setSelectedColor(currentColor);
+  }, [currentColor, setSelectedColor]);
 
   return (
     <div className={styles.palette}>
@@ -36,11 +38,17 @@ function Palette({ onColorChange }: Props) {
             key={color}
             style={{
               /* @ts-ignore */
-              "--palette-color": color,
-              backgroundColor: color,
+              "--palette-color": color.replace(".3", "1"),
+              backgroundColor: color.replace(".3", "1"),
             }}
             className={`${currentColor === color ? styles.colorSelected : ""}`}
-            onClick={() => setCurrentColor(color)}
+            onClick={() => {
+              setCurrentColor(color);
+              toolCtx?.setCurrentTool((prev) => ({
+                ...prev,
+                color: color,
+              }));
+            }}
           />
         ))}
       </ul>

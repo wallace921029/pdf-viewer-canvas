@@ -255,6 +255,8 @@ function PdfPageRender({ viewSize, imageCanvas, textDiv }: Props) {
     fabricCanvas.current = new fabric.Canvas(annotationCanvas, {
       width: viewSize.width,
       height: viewSize.height,
+      preserveObjectStacking: true, // lets objects keep their order
+      subTargetCheck: true, // checks for objects below
     });
     (fabricCanvas.current as any).subTargetCheck = true;
     fabricCanvas.current.wrapperEl.style.position = "absolute";

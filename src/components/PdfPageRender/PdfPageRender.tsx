@@ -13,16 +13,6 @@ interface Props {
 function PdfPageRender({ viewSize, imageCanvas, textDiv }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const fabricCanvas = useRef<fabric.Canvas | null>(null);
-  const d = [
-    [
-      483.79754638671875, 397.57733154296875, 504.9865417480469,
-      408.07733154296875,
-    ],
-    [
-      90.0999984741211, 420.9773254394531, 132.47799682617188,
-      431.4773254394531,
-    ],
-  ];
   const [annotationData, setAnnotationData] = useState<any[]>([
     {
       id: 1755168610666,
@@ -94,9 +84,9 @@ function PdfPageRender({ viewSize, imageCanvas, textDiv }: Props) {
 
     annotationData.forEach((annotation) => {
       const group = new fabric.Group([], {
-        hasControls: false,
         lockMovementX: true,
         lockMovementY: true,
+        hasControls: false,
         meta: {
           ...annotation,
         },
@@ -125,16 +115,16 @@ function PdfPageRender({ viewSize, imageCanvas, textDiv }: Props) {
   const handleErase = (event: any) => {
     const target = event.target;
 
-    console.log("Erase target:", target);
+    console.log("Erase target:", target, event);
     if (target && target.type === "group") {
-      fabricCanvas.current?.remove(target);
-      fabricCanvas.current?.discardActiveObject();
-      fabricCanvas.current?.requestRenderAll();
-      // Clear selection
-      const selection = document.getSelection();
-      if (selection) {
-        selection.removeAllRanges();
-      }
+      // fabricCanvas.current?.remove(target);
+      // fabricCanvas.current?.discardActiveObject();
+      // fabricCanvas.current?.requestRenderAll();
+      // // Clear selection
+      // const selection = document.getSelection();
+      // if (selection) {
+      //   selection.removeAllRanges();
+      // }
     }
   };
 
@@ -266,6 +256,7 @@ function PdfPageRender({ viewSize, imageCanvas, textDiv }: Props) {
       width: viewSize.width,
       height: viewSize.height,
     });
+    (fabricCanvas.current as any).subTargetCheck = true;
     fabricCanvas.current.wrapperEl.style.position = "absolute";
     fabricCanvas.current.wrapperEl.style.left = "0";
     fabricCanvas.current.wrapperEl.style.top = "0";

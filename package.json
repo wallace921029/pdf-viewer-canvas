@@ -13,6 +13,7 @@
     "@arco-design/web-react": "^2.66.3",
     "axios": "^1.11.0",
     "fabric": "^6.7.1",
+    "lodash": "^4.17.21",
     "pdfjs-dist": "^5.4.54",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
@@ -20,6 +21,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.32.0",
+    "@types/lodash": "^4.17.20",
     "@types/react": "^19.1.9",
     "@types/react-dom": "^19.1.7",
     "@vitejs/plugin-react": "^4.7.0",

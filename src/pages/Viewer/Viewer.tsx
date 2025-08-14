@@ -24,7 +24,6 @@ function Viewer() {
     const pdf = await loadingTask.promise;
 
     const tempPageLayers: PageLayer[] = [];
-
     for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
       const page = await pdf.getPage(pageNum);
       const viewport = page.getViewport({ scale: 1.5 });

@@ -3,6 +3,7 @@ import { useCallback, useContext, useEffect, useRef, useState } from "react";
 import * as fabric from "fabric";
 import { ToolContext } from "@/pages/Viewer/context/ToolContext";
 import { mergeRectsIntoLines } from "@/tools/merge-horizontal-rect";
+import { crossBase64Image, eraserBase64Image } from "./data/base64-image";
 
 interface Props {
   viewSize: { width: number; height: number };
@@ -83,15 +84,6 @@ function PdfPageRender({ viewSize, imageCanvas, textDiv }: Props) {
     fabricCanvas.current?.clear();
 
     annotationData.forEach((annotation) => {
-      const group = new fabric.Group([], {
-        lockMovementX: true,
-        lockMovementY: true,
-        hasControls: false,
-        meta: {
-          ...annotation,
-        },
-      } as any);
-
       annotation.group.forEach((item: any) => {
         if (item.type === "rect") {
           const rect = new fabric.Rect({
@@ -101,11 +93,15 @@ function PdfPageRender({ viewSize, imageCanvas, textDiv }: Props) {
             width: item.options.width,
             height: item.options.height,
             hasControls: false,
-          });
-          group.add(rect);
+            lockMovementX: true,
+            lockMovementY: true,
+            metaData: {
+              ...annotation,
+            },
+          } as any);
+          fabricCanvas.current?.add(rect);
         }
       });
-      fabricCanvas.current?.add(group);
     });
 
     fabricCanvas.current?.renderAll();
@@ -115,17 +111,37 @@ function PdfPageRender({ viewSize, imageCanvas, textDiv }: Props) {
   const handleErase = (event: any) => {
     const target = event.target;
 
-    console.log("Erase target:", target, event);
-    if (target && target.type === "group") {
-      // fabricCanvas.current?.remove(target);
-      // fabricCanvas.current?.discardActiveObject();
-      // fabricCanvas.current?.requestRenderAll();
-      // // Clear selection
-      // const selection = document.getSelection();
-      // if (selection) {
-      //   selection.removeAllRanges();
-      // }
+    if (!target) return;
+    console.log("Erase target:", target);
+
+    if (!target.metaData?.id) return;
+
+    const id = target.metaData.id;
+    const elementsWithTheSameId = fabricCanvas.current
+      ?.getObjects()
+      .filter((obj) => {
+        return (obj as any).metaData?.id === id;
+      });
+
+    if (elementsWithTheSameId && elementsWithTheSameId.length > 1) {
+      const tempSelection = new fabric.ActiveSelection(elementsWithTheSameId, {
+        canvas: fabricCanvas.current!,
+        hasControls: false,
+        lockMovementX: true,
+        lockMovementY: true,
+      });
+      fabricCanvas.current?.setActiveObject(tempSelection);
+      tempSelection.forEachObject((obj) => {
+        fabricCanvas.current?.remove(obj);
+      });
+      fabricCanvas.current?.discardActiveObject();
+      fabricCanvas.current?.requestRenderAll();
+    } else {
+      fabricCanvas.current?.setActiveObject(target);
+      fabricCanvas.current?.remove(target);
     }
+
+    fabricCanvas.current?.requestRenderAll();
   };
 
   const enableGroupClickDelete = useCallback((enable = true) => {
@@ -263,7 +279,7 @@ function PdfPageRender({ viewSize, imageCanvas, textDiv }: Props) {
     fabricCanvas.current.wrapperEl.style.left = "0";
     fabricCanvas.current.wrapperEl.style.top = "0";
     setFabricCanvasPointerEvents("none");
-  }, [viewSize, imageCanvas, textDiv]);
+  }, [viewSize, imageCanvas, textDiv, setFabricCanvasPointerEvents]);
 
   useEffect(() => {
     drawAnnotations();
@@ -279,6 +295,8 @@ function PdfPageRender({ viewSize, imageCanvas, textDiv }: Props) {
   }, [handleMouseUp]);
 
   useEffect(() => {
+    if (!fabricCanvas.current) return;
+
     if (
       toolCtx?.currentTool.id === "cursor" ||
       toolCtx?.currentTool.id === "brush"
@@ -288,16 +306,231 @@ function PdfPageRender({ viewSize, imageCanvas, textDiv }: Props) {
       setFabricCanvasPointerEvents("auto");
     }
 
+    // reset cursor styles
+    textDiv.classList.remove(styles.cursorDefault);
+    textDiv.classList.remove(styles.cursorBrush);
+    textDiv.classList.remove(styles.cursorCross);
+    fabricCanvas.current.hoverCursor = "auto";
+    fabricCanvas.current.defaultCursor = "auto";
+    enableGroupClickDelete(false);
+
+    if (toolCtx?.currentTool.id === "cursor") {
+      textDiv.classList.add(styles.cursorDefault);
+    }
+
+    if (toolCtx?.currentTool.id === "brush") {
+      textDiv.classList.add(styles.cursorBrush);
+    }
+
+    if (toolCtx?.currentTool.id === "rectangle") {
+      fabricCanvas.current.hoverCursor = `url(${crossBase64Image}) 8 8, auto`;
+      fabricCanvas.current.defaultCursor = `url(${crossBase64Image}) 8 8, auto`;
+    }
+
     if (toolCtx?.currentTool.id === "eraser") {
+      fabricCanvas.current.hoverCursor = `url(${eraserBase64Image}) 8 8, auto`;
+      fabricCanvas.current.defaultCursor = `url(${eraserBase64Image}) 8 8, auto`;
       enableGroupClickDelete();
-    } else {
-      enableGroupClickDelete(false);
     }
   }, [
     toolCtx?.currentTool,
     setFabricCanvasPointerEvents,
     enableGroupClickDelete,
+    textDiv.classList,
   ]);
+
+  useEffect(() => {
+    const getYPosition = (
+      target: fabric.Object,
+      labelLeft: number,
+      labelHeight: number
+    ): { y: number } => {
+      if (!fabricCanvas.current) return { y: 0 };
+
+      const gap = 5;
+      const targetTop = target.getBoundingRect().top;
+      const targetCenterY = targetTop + target.getBoundingRect().height / 2;
+
+      // Find all textboxes in the same column
+      const labelsAtSameLeft = fabricCanvas.current
+        .getObjects()
+        .filter((obj) => {
+          if (!(obj instanceof fabric.Textbox)) return false;
+          const bbox = obj.getBoundingRect();
+          return Math.abs(bbox.left - labelLeft) < 1;
+        })
+        .map((obj) => obj.getBoundingRect())
+        .sort((a, b) => a.top - b.top); // Sort by Y position
+
+      // Helper function to check if a position overlaps with any existing label
+      const hasOverlap = (y: number): boolean => {
+        return labelsAtSameLeft.some(
+          (bbox) =>
+            y < bbox.top + bbox.height + gap && y + labelHeight + gap > bbox.top
+        );
+      };
+
+      // Helper function to find available positions
+      const findAvailablePositions = (): number[] => {
+        const positions: number[] = [];
+
+        // Try the target position first
+        if (!hasOverlap(targetTop)) {
+          positions.push(targetTop);
+        }
+
+        // Add positions above each existing label
+        labelsAtSameLeft.forEach((bbox) => {
+          const positionAbove = bbox.top - labelHeight - gap;
+          if (positionAbove >= 0 && !hasOverlap(positionAbove)) {
+            positions.push(positionAbove);
+          }
+        });
+
+        // Add positions below each existing label
+        labelsAtSameLeft.forEach((bbox) => {
+          const positionBelow = bbox.top + bbox.height + gap;
+          if (!hasOverlap(positionBelow)) {
+            positions.push(positionBelow);
+          }
+        });
+
+        // If no labels exist or no good positions found, add some default positions
+        if (positions.length === 0) {
+          // Try positions around the target
+          for (let offset = 0; offset <= 200; offset += 20) {
+            const abovePos = targetTop - offset;
+            const belowPos = targetTop + offset;
+
+            if (abovePos >= 0 && !hasOverlap(abovePos)) {
+              positions.push(abovePos);
+            }
+            if (!hasOverlap(belowPos)) {
+              positions.push(belowPos);
+            }
+          }
+        }
+
+        return positions;
+      };
+
+      const availablePositions = findAvailablePositions();
+
+      if (availablePositions.length === 0) {
+        // Fallback: place at the bottom of all existing labels
+        const lowestLabel = labelsAtSameLeft.reduce(
+          (lowest, bbox) =>
+            bbox.top + bbox.height > lowest ? bbox.top + bbox.height : lowest,
+          targetTop
+        );
+        return { y: lowestLabel + gap };
+      }
+
+      // Find the position closest to target center Y
+      const bestPosition = availablePositions.reduce((best, current) => {
+        const currentCenterY = current + labelHeight / 2;
+        const bestCenterY = best + labelHeight / 2;
+
+        const currentDistance = Math.abs(currentCenterY - targetCenterY);
+        const bestDistance = Math.abs(bestCenterY - targetCenterY);
+
+        return currentDistance < bestDistance ? current : best;
+      });
+
+      return { y: bestPosition };
+    };
+
+    const connectLabel = (target: fabric.Object, label: fabric.Textbox) => {
+      const canvas = fabricCanvas.current;
+      if (!canvas) return;
+
+      // 获取 target 右上角
+      const targetRight = target.getCoords()[1]; // topRight
+      // 获取 label 左上角
+      const labelLeftTop = label.getBoundingRect();
+
+      // 创建 line
+      const line = new fabric.Line(
+        [
+          targetRight.x,
+          targetRight.y + target.getBoundingRect().height / 2, // target 中点Y
+          labelLeftTop.left,
+          labelLeftTop.top + label.getBoundingRect().height / 2, // label 中点Y
+        ],
+        {
+          stroke: "blue",
+          strokeWidth: 1,
+          selectable: false,
+          evented: false,
+        }
+      );
+
+      fabricCanvas.current!.add(line);
+      fabricCanvas.current!.sendObjectToBack(line); // 让线在最底层
+
+      // 当 target 或 label 移动时更新 line
+      const updateLine = () => {
+        const tRect = target.getBoundingRect();
+        const lRect = label.getBoundingRect();
+
+        line.set({
+          x1: tRect.left + tRect.width, // target 右边
+          y1: tRect.top + tRect.height / 2,
+          x2: lRect.left, // label 左边
+          y2: lRect.top + lRect.height / 2,
+        });
+        canvas.requestRenderAll();
+      };
+
+      target.on("moving", updateLine);
+      label.on("moving", updateLine);
+    };
+
+    const addLabelToRight = (target: fabric.Object, text: string) => {
+      const labelWidth = 120;
+      const labelLeft = viewSize.width - 130;
+      const tempLabel = new fabric.Textbox(text, {
+        width: labelWidth,
+        fontSize: 12,
+        splitByGrapheme: true,
+        textAlign: "justify",
+      });
+      const labelHeight = tempLabel.getBoundingRect().height;
+
+      const { y } = getYPosition(target, labelLeft, labelHeight);
+      console.log(labelLeft, y);
+
+      const label = new fabric.Textbox(text, {
+        top: y,
+        left: labelLeft,
+        width: labelWidth,
+        fontSize: 12,
+        fill: "red",
+        splitByGrapheme: true,
+        textAlign: "justify",
+      });
+
+      fabricCanvas.current!.add(label);
+      connectLabel(target, label);
+    };
+
+    fabricCanvas.current!.on("mouse:down", (e) => {
+      console.log(e.e);
+      if (e.e.button === 0) {
+        // 右键
+        e.e.preventDefault();
+        e.e.stopPropagation();
+
+        const target = e.target;
+        if (target && target.type === "rect") {
+          addLabelToRight(
+            target,
+            "作文的内容很差，非常糟糕，简直就是乱写，你要是这个态度的话，你就别想毕业了。3年了，连基本的实验都做不好！！！！"
+          );
+        }
+      }
+    });
+  }, []);
 
   return (
     <div

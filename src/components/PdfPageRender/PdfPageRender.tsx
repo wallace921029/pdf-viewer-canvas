@@ -4,6 +4,7 @@ import * as fabric from "fabric";
 import { ToolContext } from "@/pages/Viewer/context/ToolContext";
 import { mergeRectsIntoLines } from "@/tools/merge-horizontal-rect";
 import { crossBase64Image, eraserBase64Image } from "./data/base64-image";
+import type { Annotation } from "@/types/annotation";
 
 interface Props {
   viewSize: { width: number; height: number };
@@ -14,7 +15,7 @@ interface Props {
 function PdfPageRender({ viewSize, imageCanvas, textDiv }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const fabricCanvas = useRef<fabric.Canvas | null>(null);
-  const [annotationData, setAnnotationData] = useState<any[]>([
+  const [annotationData, setAnnotationData] = useState<Annotation[]>([
     {
       id: 1755168610666,
       selectedText: "制解析",
@@ -236,7 +237,7 @@ function PdfPageRender({ viewSize, imageCanvas, textDiv }: Props) {
     };
 
     annotationData.forEach((annotation) => {
-      annotation.group.forEach((item: any) => {
+      annotation.group.forEach((item) => {
         if (item.type === "rect") {
           const rect = new fabric.Rect({
             left: item.options.left,
@@ -250,7 +251,7 @@ function PdfPageRender({ viewSize, imageCanvas, textDiv }: Props) {
             metaData: {
               ...annotation,
             },
-          } as any);
+          });
           const { x, y } = rect.getCoords()[1];
           const commentIcon = new fabric.FabricText("💬", {
             left: x - 20,
@@ -277,7 +278,7 @@ function PdfPageRender({ viewSize, imageCanvas, textDiv }: Props) {
               };
             }
 
-            if (targetAnnotation.group[0].comment.text) {
+            if (targetAnnotation.group[0].comment!.text) {
               targetAnnotation.group[0].comment = {
                 text: "",
               };
@@ -338,7 +339,7 @@ function PdfPageRender({ viewSize, imageCanvas, textDiv }: Props) {
     });
 
     fabricCanvas.current?.renderAll();
-  }, [annotationData]);
+  }, [annotationData, viewSize.width]);
 
   // Handle erasing annotations
   const handleErase = (event: any) => {

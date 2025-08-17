@@ -9,6 +9,7 @@ import { useEffect, useState } from "react";
 import PdfPageRender from "@/components/PdfPageRender/PdfPageRender";
 import demoFile from "@/assets/冯少桐-07班-循环和呼吸功能调节综合实验.pdf?url";
 import type { PageLayer } from "./types";
+import type { Annotation } from "@/types/annotation";
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = workerUrl;
 
@@ -17,6 +18,59 @@ function Viewer() {
 
   const [viewSize, setViewSize] = useState({ width: 0, height: 0 });
   const [pageLayers, setPageLayers] = useState<PageLayer[]>([]);
+  const [annotationData, setAnnotationData] = useState<Annotation[][]>([
+    [
+      {
+        id: 1755168610666,
+        selectedText: "制解析",
+        group: [
+          {
+            type: "rect",
+            options: {
+              left: 427.03761291503906,
+              top: 595.7291870117188,
+              fill: "rgba(255, 0, 0, .3)",
+              width: 48.6417236328125,
+              height: 18,
+              hasControls: false,
+            },
+            comment: {
+              text: "你这中水平好意思毕业？你在外面别说我是你的导师。",
+            },
+          },
+        ],
+      },
+      {
+        id: Date.now(),
+        selectedText: "家兔气管插管",
+        group: [
+          {
+            type: "rect",
+            options: {
+              left: 483.79754638671875 * 1.5,
+              top: 397.57733154296875 * 1.5,
+              fill: "rgba(148, 0, 211, .3)",
+              width: 21.188995361328125 * 1.5,
+              height: 10.5 * 1.5,
+            },
+            comment: {
+              text: "你在干嘛？",
+            },
+          },
+          {
+            type: "rect",
+            options: {
+              left: 90.0999984741211 * 1.5,
+              top: 420.9773254394531 * 1.5,
+              fill: "rgba(148, 0, 211, .3)",
+              width: 42.37899835205078 * 1.5,
+              height: 10.5 * 1.5,
+            },
+          },
+        ],
+      },
+    ],
+  ]);
 
   // load PDF content and render pages
   const loadPdf = async (url: string) => {
@@ -93,6 +147,14 @@ function Viewer() {
             viewSize={viewSize}
             imageCanvas={pageLayer.imageCanvas}
             textDiv={pageLayer.textDiv}
+            annotationData={annotationData[pageLayerIndex] || []}
+            setAnnotationData={(newAnnotationData) => {
+              setAnnotationData((prev) => {
+                const updated = [...prev];
+                updated[pageLayerIndex] = newAnnotationData;
+                return updated;
+              });
+            }}
           />
         ))}
       </div>

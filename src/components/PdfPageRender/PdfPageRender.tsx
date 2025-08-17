@@ -1,5 +1,5 @@
 import styles from "./styles/pdf-page-render.module.scss";
-import { useCallback, useContext, useEffect, useRef, useState } from "react";
+import { useCallback, useContext, useEffect, useRef } from "react";
 import * as fabric from "fabric";
 import { ToolContext } from "@/pages/Viewer/context/ToolContext";
 import { mergeRectsIntoLines } from "@/tools/merge-horizontal-rect";
@@ -10,62 +10,19 @@ interface Props {
   viewSize: { width: number; height: number };
   imageCanvas: HTMLCanvasElement;
   textDiv: HTMLDivElement;
+  annotationData: Annotation[];
+  setAnnotationData: (value: Annotation[]) => void;
 }
 
-function PdfPageRender({ viewSize, imageCanvas, textDiv }: Props) {
+function PdfPageRender({
+  viewSize,
+  imageCanvas,
+  textDiv,
+  annotationData,
+  setAnnotationData,
+}: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const fabricCanvas = useRef<fabric.Canvas | null>(null);
-  const [annotationData, setAnnotationData] = useState<Annotation[]>([
-    {
-      id: 1755168610666,
-      selectedText: "制解析",
-      group: [
-        {
-          type: "rect",
-          options: {
-            left: 427.03761291503906,
-            top: 595.7291870117188,
-            fill: "rgba(255, 0, 0, .3)",
-            width: 48.6417236328125,
-            height: 18,
-            hasControls: false,
-          },
-          comment: {
-            text: "你这中水平好意思毕业？你在外面别说我是你的导师。",
-          },
-        },
-      ],
-    },
-    {
-      id: Date.now(),
-      selectedText: "家兔气管插管",
-      group: [
-        {
-          type: "rect",
-          options: {
-            left: 483.79754638671875 * 1.5,
-            top: 397.57733154296875 * 1.5,
-            fill: "rgba(148, 0, 211, .3)",
-            width: 21.188995361328125 * 1.5,
-            height: 10.5 * 1.5,
-          },
-          comment: {
-            text: "你在干嘛？",
-          },
-        },
-        {
-          type: "rect",
-          options: {
-            left: 90.0999984741211 * 1.5,
-            top: 420.9773254394531 * 1.5,
-            fill: "rgba(148, 0, 211, .3)",
-            width: 42.37899835205078 * 1.5,
-            height: 10.5 * 1.5,
-          },
-        },
-      ],
-    },
-  ]);
 
   const toolCtx = useContext(ToolContext);
 
@@ -339,7 +296,7 @@ function PdfPageRender({ viewSize, imageCanvas, textDiv }: Props) {
     });
 
     fabricCanvas.current?.renderAll();
-  }, [annotationData, viewSize.width]);
+  }, [annotationData, setAnnotationData, viewSize.width]);
 
   // Handle erasing annotations
   const handleErase = (event: any) => {
@@ -472,9 +429,15 @@ function PdfPageRender({ viewSize, imageCanvas, textDiv }: Props) {
         }),
       };
 
-      setAnnotationData((prevValue) => [...prevValue, rectGroup]);
+      setAnnotationData([...annotationData, rectGroup]);
     },
-    [textDiv, toolCtx]
+    [
+      annotationData,
+      setAnnotationData,
+      textDiv,
+      toolCtx?.currentTool.color,
+      toolCtx?.currentTool.id,
+    ]
   );
 
   useEffect(() => {

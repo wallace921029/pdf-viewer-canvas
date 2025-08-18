@@ -1,15 +1,15 @@
 interface Rect {
-  left: number;
-  top: number;
-  width: number;
-  height: number;
+  left: number
+  top: number
+  width: number
+  height: number
 }
 
 interface MergedLine {
-  top: number;
-  height: number;
-  left: number;
-  width: number;
+  top: number
+  height: number
+  left: number
+  width: number
 }
 
 /**
@@ -22,43 +22,43 @@ function mergeRectsIntoLines(
   rects: Rect[],
   tolerance: number = 5
 ): MergedLine[] {
-  if (rects.length === 0) return [];
+  if (rects.length === 0) return []
 
   // 1. 按 top 排序
-  const sorted = [...rects].sort((a, b) => a.top - b.top);
+  const sorted = [...rects].sort((a, b) => a.top - b.top)
 
-  const lines: MergedLine[] = [];
+  const lines: MergedLine[] = []
 
   for (const rect of sorted) {
-    const right = rect.left + rect.width;
+    const right = rect.left + rect.width
 
     // 2. 尝试合并到现有行
     const existingLine = lines.find(
       (line) =>
-        Math.abs(rect.top - line.top) <= tolerance &&
-        Math.abs(rect.height - line.height) <= tolerance
-    );
+        Math.abs(rect.top - line.top) <= tolerance
+        && Math.abs(rect.height - line.height) <= tolerance
+    )
 
     if (existingLine) {
       // 合并：更新 left 和 right
-      existingLine.left = Math.min(existingLine.left, rect.left);
+      existingLine.left = Math.min(existingLine.left, rect.left)
       const currentRight = Math.max(
         existingLine.left + existingLine.width,
         right
-      );
-      existingLine.width = currentRight - existingLine.left;
+      )
+      existingLine.width = currentRight - existingLine.left
     } else {
       // 创建新行
       lines.push({
         top: rect.top,
         height: rect.height,
         left: rect.left,
-        width: rect.width,
-      });
+        width: rect.width
+      })
     }
   }
 
-  return lines;
+  return lines
 }
 
-export { mergeRectsIntoLines };
+export { mergeRectsIntoLines }

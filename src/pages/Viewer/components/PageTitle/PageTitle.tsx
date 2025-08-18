@@ -1,4 +1,4 @@
-import styles from "./styles/page-title.module.scss";
+import styles from './styles/page-title.module.scss'
 
 function PageTitle() {
   return (
@@ -11,7 +11,7 @@ function PageTitle() {
       <span>得分: 92.5</span>
       <span>等级: 优秀</span>
     </div>
-  );
+  )
 }
 
-export default PageTitle;
+export default PageTitle

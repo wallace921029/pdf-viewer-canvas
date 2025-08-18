@@ -1,29 +1,29 @@
 .toolbar {
-    box-shadow: 0 2px 2px 0 #dedede;
+  box-shadow: 0 2px 2px 0 #dedede;
 
-    .toolbox {
-        padding: 8px 16px;
-        display: flex;
-        align-items: center;
+  .toolbox {
+    padding: 8px 16px;
+    display: flex;
+    align-items: center;
 
-        .toolboxItem {
-            padding: 4px;
-            border-radius: 4px;
-            cursor: pointer;
+    .toolboxItem {
+      padding: 4px;
+      border-radius: 4px;
+      cursor: pointer;
 
-            img {
-                display: block;
-                width: 24px;
-            }
+      img {
+        display: block;
+        width: 24px;
+      }
 
-            &:hover {
-                background-color: #f0f0f0;
-            }
+      &:hover {
+        background-color: #f0f0f0;
+      }
 
-            &.toolboxItemSelected {
-                background-color: #e6f7ff;
-                box-shadow: 0 0 0 1px #91d5ff inset;
-            }
-        }
+      &.toolboxItemSelected {
+        background-color: #e6f7ff;
+        box-shadow: 0 0 0 1px #91d5ff inset;
+      }
     }
+  }
 }

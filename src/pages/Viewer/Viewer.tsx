@@ -10,6 +10,7 @@ import PdfPageRender from '@/components/PdfPageRender/PdfPageRender'
 import demoFile from '@/assets/冯少桐-07班-循环和呼吸功能调节综合实验.pdf?url'
 import type { PageLayer } from './types'
 import type { Annotation } from '@/types/annotation'
+import PresetComment from './components/PresetComment/PresetComment'
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = workerUrl
 
@@ -166,7 +167,9 @@ function Viewer() {
 
         {showPresetAnnotations && (
           <div className={styles.presetAnnotationContainer}>
-            {/* Render preset annotations here */}
+            <PresetComment
+              setShowPresetAnnotations={setShowPresetAnnotations}
+            />
           </div>
         )}
       </div>

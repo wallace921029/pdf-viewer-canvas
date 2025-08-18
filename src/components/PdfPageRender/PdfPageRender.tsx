@@ -1,5 +1,5 @@
 import styles from './styles/pdf-page-render.module.scss'
-import { useCallback, useContext, useEffect, useRef } from 'react'
+import React, { useCallback, useContext, useEffect, useRef } from 'react'
 import * as fabric from 'fabric'
 import { ToolContext } from '@/pages/Viewer/context/ToolContext'
 import { mergeRectsIntoLines } from '@/tools/merge-horizontal-rect'
@@ -12,6 +12,7 @@ interface Props {
   textDiv: HTMLDivElement
   annotationData: Annotation[]
   setAnnotationData: (value: Annotation[]) => void
+  setShowPresetAnnotations: React.Dispatch<React.SetStateAction<boolean>>
 }
 
 function PdfPageRender({
@@ -19,7 +20,8 @@ function PdfPageRender({
   imageCanvas,
   textDiv,
   annotationData,
-  setAnnotationData
+  setAnnotationData,
+  setShowPresetAnnotations
 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null)
   const fabricCanvas = useRef<fabric.Canvas | null>(null)
@@ -244,6 +246,8 @@ function PdfPageRender({
               }
             }
 
+            setShowPresetAnnotations(true)
+
             if (targetAnnotation.group[0].comment!.text) {
               targetAnnotation.group[0].comment = {
                 text: ''
@@ -259,8 +263,17 @@ function PdfPageRender({
           })
 
           // delete annotation
-          deleteIcon.on('mousedown', (event) => {
-            console.log('> delete icon event', event)
+          deleteIcon.on('mousedown', () => {
+            const targetAnnotation = annotationData.find(
+              (ann) => ann.id === annotation.id
+            )
+            if (!targetAnnotation) return
+
+            const newAnnotationData = annotationData.filter(
+              (ann) => ann.id !== targetAnnotation.id
+            )
+            setAnnotationData([...newAnnotationData])
+            fabricCanvas.current?.renderAll()
           })
 
           fabricCanvas.current?.add(rect)
@@ -324,51 +337,6 @@ function PdfPageRender({
 
     fabricCanvas.current?.renderAll()
   }, [annotationData, setAnnotationData, viewSize.width])
-
-  // Handle erasing annotations
-  const handleErase = (event: any) => {
-    const target = event.target
-
-    if (!target) return
-    console.log('Erase target:', target)
-
-    if (!target.metaData?.id) return
-
-    const id = target.metaData.id
-    const elementsWithTheSameId = fabricCanvas.current
-      ?.getObjects()
-      .filter((obj) => {
-        return (obj as any).metaData?.id === id
-      })
-
-    if (elementsWithTheSameId && elementsWithTheSameId.length > 1) {
-      const tempSelection = new fabric.ActiveSelection(elementsWithTheSameId, {
-        canvas: fabricCanvas.current!,
-        hasControls: false,
-        lockMovementX: true,
-        lockMovementY: true
-      })
-      fabricCanvas.current?.setActiveObject(tempSelection)
-      tempSelection.forEachObject((obj) => {
-        fabricCanvas.current?.remove(obj)
-      })
-      fabricCanvas.current?.discardActiveObject()
-      fabricCanvas.current?.requestRenderAll()
-    } else {
-      fabricCanvas.current?.setActiveObject(target)
-      fabricCanvas.current?.remove(target)
-    }
-
-    fabricCanvas.current?.requestRenderAll()
-  }
-
-  const enableGroupClickDelete = useCallback((enable = true) => {
-    if (!fabricCanvas.current) return
-
-    fabricCanvas.current.off('mouse:down', handleErase)
-
-    if (enable) fabricCanvas.current.on('mouse:down', handleErase)
-  }, [])
 
   // for selecting text
   const handleMouseUp = useCallback(
@@ -498,6 +466,7 @@ function PdfPageRender({
       preserveObjectStacking: true, // lets objects keep their order
       subTargetCheck: true // checks for objects below
     })
+    fabricCanvas.current.selection = false
     ;(fabricCanvas.current as any).subTargetCheck = true
     fabricCanvas.current.wrapperEl.style.position = 'absolute'
     fabricCanvas.current.wrapperEl.style.left = '0'
@@ -536,7 +505,6 @@ function PdfPageRender({
     textDiv.classList.remove(styles.cursorCross)
     fabricCanvas.current.hoverCursor = 'auto'
     fabricCanvas.current.defaultCursor = 'auto'
-    enableGroupClickDelete(false)
 
     if (toolCtx?.currentTool.id === 'cursor') {
       textDiv.classList.add(styles.cursorDefault)
@@ -554,14 +522,8 @@ function PdfPageRender({
     if (toolCtx?.currentTool.id === 'eraser') {
       fabricCanvas.current.hoverCursor = `url(${eraserBase64Image}) 8 8, auto`
       fabricCanvas.current.defaultCursor = `url(${eraserBase64Image}) 8 8, auto`
-      enableGroupClickDelete()
     }
-  }, [
-    toolCtx?.currentTool,
-    setFabricCanvasPointerEvents,
-    enableGroupClickDelete,
-    textDiv.classList
-  ])
+  }, [toolCtx?.currentTool, setFabricCanvasPointerEvents, textDiv.classList])
 
   return (
     <div

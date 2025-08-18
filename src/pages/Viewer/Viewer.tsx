@@ -130,6 +130,9 @@ function Viewer() {
     })
   }, [fileUrl])
 
+  // show preset annotations
+  const [showPresetAnnotations, setShowPresetAnnotations] = useState(false)
+
   return (
     <div className={`${styles.viewer}`}>
       <div className={styles.pageTitleContainer}>
@@ -140,23 +143,32 @@ function Viewer() {
         <Toolbar />
       </div>
 
-      <div className={`${styles.viewerContainer} pdfViewer`} id='viewer'>
-        {pageLayers.map((pageLayer, pageLayerIndex) => (
-          <PdfPageRender
-            key={pageLayerIndex}
-            viewSize={viewSize}
-            imageCanvas={pageLayer.imageCanvas}
-            textDiv={pageLayer.textDiv}
-            annotationData={annotationData[pageLayerIndex] || []}
-            setAnnotationData={(newAnnotationData) => {
-              setAnnotationData((prev) => {
-                const updated = [...prev]
-                updated[pageLayerIndex] = newAnnotationData
-                return updated
-              })
-            }}
-          />
-        ))}
+      <div className={`${styles.bodyContainer}`}>
+        <div className={`${styles.viewerContainer} pdfViewer`} id='viewer'>
+          {pageLayers.map((pageLayer, pageLayerIndex) => (
+            <PdfPageRender
+              key={pageLayerIndex}
+              viewSize={viewSize}
+              imageCanvas={pageLayer.imageCanvas}
+              textDiv={pageLayer.textDiv}
+              annotationData={annotationData[pageLayerIndex] || []}
+              setAnnotationData={(newAnnotationData) => {
+                setAnnotationData((prev) => {
+                  const updated = [...prev]
+                  updated[pageLayerIndex] = newAnnotationData
+                  return updated
+                })
+              }}
+              setShowPresetAnnotations={setShowPresetAnnotations}
+            />
+          ))}
+        </div>
+
+        {showPresetAnnotations && (
+          <div className={styles.presetAnnotationContainer}>
+            {/* Render preset annotations here */}
+          </div>
+        )}
       </div>
     </div>
   )

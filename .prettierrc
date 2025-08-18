@@ -4,6 +4,7 @@
   "objectWrap": "preserve",
   "bracketSpacing": true,
   "semi": false,
+  "endOfLine": "lf",
   "experimentalOperatorPosition": "start",
   "experimentalTernaries": false,
   "singleQuote": true,

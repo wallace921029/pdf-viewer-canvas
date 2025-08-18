@@ -211,8 +211,17 @@ function PdfPageRender({
           })
           const { x, y } = rect.getCoords()[1]
           const commentIcon = new fabric.FabricText('💬', {
+            left: x - 40,
+            top: y - 20,
+            fontSize: 16,
+            selectable: false,
+            fill: 'transparent',
+            evented: false,
+            hoverCursor: 'pointer'
+          })
+          const deleteIcon = new fabric.FabricText('🚮', {
             left: x - 20,
-            top: y - 16,
+            top: y - 20,
             fontSize: 16,
             selectable: false,
             fill: 'transparent',
@@ -249,8 +258,14 @@ function PdfPageRender({
             fabricCanvas.current?.renderAll()
           })
 
+          // delete annotation
+          deleteIcon.on('mousedown', (event) => {
+            console.log('> delete icon event', event)
+          })
+
           fabricCanvas.current?.add(rect)
           fabricCanvas.current?.add(commentIcon)
+          fabricCanvas.current?.add(deleteIcon)
 
           // render comment
           if (item.comment && item.comment.text) {
@@ -271,7 +286,11 @@ function PdfPageRender({
               fontSize: 12,
               fill: 'red',
               splitByGrapheme: true,
-              textAlign: 'justify-left'
+              textAlign: 'justify-left',
+              lockMovementX: true,
+              lockMovementY: true,
+              hasControls: false,
+              editable: false
             })
 
             fabricCanvas.current!.add(label)
@@ -283,10 +302,18 @@ function PdfPageRender({
               fill: 'red',
               evented: true
             })
+            deleteIcon.set({
+              fill: 'red',
+              evented: true
+            })
           })
 
           rect.on('deselected', () => {
             commentIcon.set({
+              fill: 'transparent',
+              evented: false
+            })
+            deleteIcon.set({
               fill: 'transparent',
               evented: false
             })

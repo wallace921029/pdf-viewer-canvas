@@ -1,4 +1,4 @@
-import styles from './styles/preset-comment.scss'
+import styles from './styles/preset-comment.module.scss'
 
 function PresetComment() {
   return <div className={styles.presetComment}>123</div>

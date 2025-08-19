@@ -10,6 +10,10 @@ import OtherActions from './OtherActions'
 import eraserSVG from '@/assets/svg/eraser.svg'
 import { ToolContext } from '../../context/ToolContext'
 
+interface Props {
+  onSave: () => void
+}
+
 const toolItems = [
   { id: 'cursor', icon: cursorSVG, title: 'Cursor' },
   { id: 'brush', icon: brushSVG, title: 'Brush' },
@@ -17,7 +21,7 @@ const toolItems = [
   { id: 'eraser', icon: eraserSVG, title: 'Eraser' }
 ]
 
-function Toolbar() {
+function Toolbar({ onSave }: Props) {
   const [selectedTool, setSelectedTool] = useState('cursor')
   const [selectedColor, setSelectedColor] = useState('')
 
@@ -38,14 +42,17 @@ function Toolbar() {
                 toolCtx?.setCurrentTool((prev) => ({ ...prev, id: item.id }))
               }}
             >
-              <img src={item.icon} alt={item.id} />
+              <img
+                src={item.icon}
+                alt={item.id}
+              />
             </div>
             <Divider type='vertical' />
           </Fragment>
         ))}
         <Palette setSelectedColor={setSelectedColor} />
         <Divider type='vertical' />
-        <OtherActions />
+        <OtherActions onSave={onSave} />
       </div>
     </div>
   )

@@ -12,7 +12,8 @@ interface Props {
   textDiv: HTMLDivElement
   annotationData: Annotation[]
   setAnnotationData: (value: Annotation[]) => void
-  setShowPresetAnnotations: React.Dispatch<React.SetStateAction<boolean>>
+  setShowPresetComment: React.Dispatch<React.SetStateAction<boolean>>
+  setFocusedAnnotation: React.Dispatch<React.SetStateAction<Annotation | null>>
 }
 
 function PdfPageRender({
@@ -21,7 +22,8 @@ function PdfPageRender({
   textDiv,
   annotationData,
   setAnnotationData,
-  setShowPresetAnnotations
+  setShowPresetComment,
+  setFocusedAnnotation
 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null)
   const fabricCanvas = useRef<fabric.Canvas | null>(null)
@@ -221,7 +223,7 @@ function PdfPageRender({
             evented: false,
             hoverCursor: 'pointer'
           })
-          const deleteIcon = new fabric.FabricText('🚮', {
+          const deleteIcon = new fabric.FabricText('❌', {
             left: x - 20,
             top: y - 20,
             fontSize: 16,
@@ -246,15 +248,12 @@ function PdfPageRender({
               }
             }
 
-            setShowPresetAnnotations(true)
+            setFocusedAnnotation(targetAnnotation)
+            setShowPresetComment(true)
 
             if (targetAnnotation.group[0].comment!.text) {
               targetAnnotation.group[0].comment = {
                 text: ''
-              }
-            } else {
-              targetAnnotation.group[0].comment = {
-                text: '你真牛啊！这论文是院士帮你写的吧？'
               }
             }
 
@@ -336,7 +335,13 @@ function PdfPageRender({
     })
 
     fabricCanvas.current?.renderAll()
-  }, [annotationData, setAnnotationData, viewSize.width])
+  }, [
+    annotationData,
+    setAnnotationData,
+    setFocusedAnnotation,
+    setShowPresetComment,
+    viewSize.width
+  ])
 
   // for selecting text
   const handleMouseUp = useCallback(

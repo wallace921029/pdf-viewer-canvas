@@ -1,7 +1,10 @@
 import { Button, Divider, Dropdown, Menu } from '@arco-design/web-react'
 import styles from './styles/other-actions.module.scss'
+interface Props {
+  onSave: () => void
+}
 
-function OtherActions() {
+function OtherActions({ onSave }: Props) {
   const droplist = (
     <Menu>
       <Menu.Item key='PlagiarismCheck'>对比查重</Menu.Item>
@@ -19,14 +22,25 @@ function OtherActions() {
       <Button size='mini'>智能总评</Button>
       <Button size='mini'>文本模式</Button>
       <Button size='mini'>文字</Button>
-      <Button type='primary' status='danger' size='mini'>
+      <Button
+        type='primary'
+        status='danger'
+        size='mini'
+      >
         删除
       </Button>
       <Divider type='vertical' />
-      <Button type='primary' size='mini'>
+      <Button
+        type='primary'
+        size='mini'
+        onClick={onSave}
+      >
         保存上传
       </Button>
-      <Dropdown droplist={droplist} trigger={'click'}>
+      <Dropdown
+        droplist={droplist}
+        trigger={'click'}
+      >
         <Button size='mini'>...</Button>
       </Dropdown>
     </div>

@@ -73,6 +73,10 @@ function Viewer() {
     ]
   ])
 
+  const handleSave = () => {
+    console.log('> annotationData', annotationData)
+  }
+
   // load PDF content and render pages
   const loadPdf = async (url: string) => {
     const loadingTask = pdfjsLib.getDocument(url)
@@ -112,7 +116,6 @@ function Viewer() {
         container: pageTextDiv,
         viewport: viewport
       })
-
       await textLayer.render()
 
       tempPageLayers.push({
@@ -131,8 +134,11 @@ function Viewer() {
     })
   }, [fileUrl])
 
-  // show preset annotations
-  const [showPresetAnnotations, setShowPresetAnnotations] = useState(false)
+  // show preset comment
+  const [showPresetComment, setShowPresetComment] = useState(false)
+  const [focusedAnnotation, setFocusedAnnotation] = useState<Annotation | null>(
+    null
+  )
 
   return (
     <div className={`${styles.viewer}`}>
@@ -141,11 +147,14 @@ function Viewer() {
       </div>
 
       <div className={styles.toolbarContainer}>
-        <Toolbar />
+        <Toolbar onSave={handleSave} />
       </div>
 
       <div className={`${styles.bodyContainer}`}>
-        <div className={`${styles.viewerContainer} pdfViewer`} id='viewer'>
+        <div
+          className={`${styles.viewerContainer} pdfViewer`}
+          id='viewer'
+        >
           {pageLayers.map((pageLayer, pageLayerIndex) => (
             <PdfPageRender
               key={pageLayerIndex}
@@ -160,15 +169,18 @@ function Viewer() {
                   return updated
                 })
               }}
-              setShowPresetAnnotations={setShowPresetAnnotations}
+              setShowPresetComment={setShowPresetComment}
+              setFocusedAnnotation={setFocusedAnnotation}
             />
           ))}
         </div>
 
-        {showPresetAnnotations && (
+        {showPresetComment && (
           <div className={styles.presetAnnotationContainer}>
             <PresetComment
-              setShowPresetAnnotations={setShowPresetAnnotations}
+              focusedAnnotation={focusedAnnotation}
+              setFocusedAnnotation={setFocusedAnnotation}
+              setShowPresetComment={setShowPresetComment}
             />
           </div>
         )}

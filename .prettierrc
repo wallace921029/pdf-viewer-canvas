@@ -10,7 +10,7 @@
   "jsxSingleQuote": true,
   "quoteProps": "as-needed",
   "trailingComma": "none",
-  "singleAttributePerLine": false,
+  "singleAttributePerLine": true,
   "htmlWhitespaceSensitivity": "css",
   "vueIndentScriptAndStyle": false,
   "proseWrap": "preserve",

@@ -30,7 +30,11 @@ function Palette({ setSelectedColor }: Props) {
   return (
     <div className={styles.palette}>
       <div className={styles.icon}>
-        <img src={paletteSVG} alt='Palette' title='Palette' />
+        <img
+          src={paletteSVG}
+          alt='Palette'
+          title='Palette'
+        />
       </div>
       <ul>
         {paletteColors.map((color) => (

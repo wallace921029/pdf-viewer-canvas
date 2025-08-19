@@ -57,7 +57,12 @@ function FabricDemo() {
     }
   }, [])
 
-  return <div className={styles.fabricDemo} ref={containerRef}></div>
+  return (
+    <div
+      className={styles.fabricDemo}
+      ref={containerRef}
+    ></div>
+  )
 }
 
 export default FabricDemo

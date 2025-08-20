@@ -244,6 +244,7 @@ function PdfPageRender({
 
             if (!target.comment) {
               target.comment = {
+                annotationRuleId: '',
                 text: ''
               }
             }
@@ -253,6 +254,7 @@ function PdfPageRender({
 
             if (targetAnnotation.group[0].comment!.text) {
               targetAnnotation.group[0].comment = {
+                annotationRuleId: '',
                 text: ''
               }
             }
@@ -343,8 +345,8 @@ function PdfPageRender({
     viewSize.width
   ])
 
-  // for selecting text
-  const handleMouseUp = useCallback(
+  /** Text selection */
+  const handleTextSelectionMouseUp = useCallback(
     (event: MouseEvent) => {
       if (toolCtx?.currentTool.id !== 'brush') return
 
@@ -410,7 +412,7 @@ function PdfPageRender({
 
       // 11. 输出或使用结果
       const mergedLines = mergeRectsIntoLines(linesInfo, 5)
-      const rectGroup = {
+      const newAnn = {
         id: Date.now(),
         selectedText,
         group: mergedLines.map((line) => {
@@ -424,16 +426,26 @@ function PdfPageRender({
               width: line.width,
               height: line.height,
               hasControls: false
+            },
+            comment: {
+              annotationRuleId: '',
+              text: ''
             }
           }
         })
       }
 
-      setAnnotationData([...annotationData, rectGroup])
+      setAnnotationData([...annotationData, newAnn])
+      setFocusedAnnotation(newAnn)
+      setShowPresetComment(true)
+      // clear the text selection
+      selection.removeAllRanges()
     },
     [
       annotationData,
       setAnnotationData,
+      setFocusedAnnotation,
+      setShowPresetComment,
       textDiv,
       toolCtx?.currentTool.color,
       toolCtx?.currentTool.id
@@ -484,13 +496,13 @@ function PdfPageRender({
   }, [renderAnnotations])
 
   useEffect(() => {
-    document.removeEventListener('mouseup', handleMouseUp)
-    document.addEventListener('mouseup', handleMouseUp)
+    document.removeEventListener('mouseup', handleTextSelectionMouseUp)
+    document.addEventListener('mouseup', handleTextSelectionMouseUp)
 
     return () => {
-      document.removeEventListener('mouseup', handleMouseUp)
+      document.removeEventListener('mouseup', handleTextSelectionMouseUp)
     }
-  }, [handleMouseUp])
+  }, [handleTextSelectionMouseUp])
 
   useEffect(() => {
     if (!fabricCanvas.current) return

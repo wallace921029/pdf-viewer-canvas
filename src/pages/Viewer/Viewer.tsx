@@ -36,6 +36,7 @@ function Viewer() {
               hasControls: false
             },
             comment: {
+              annotationRuleId: 100,
               text: '你这中水平好意思毕业？你在外面别说我是你的导师。'
             }
           }
@@ -55,6 +56,7 @@ function Viewer() {
               height: 10.5 * 1.5
             },
             comment: {
+              annotationRuleId: 101,
               text: '你在干嘛？'
             }
           },

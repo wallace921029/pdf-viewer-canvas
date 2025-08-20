@@ -10,6 +10,7 @@ export interface FabricElement {
     // 可根据需求继续扩展 Fabric 对象属性
   }
   comment?: {
+    annotationRuleId: number | string
     text: string
   }
 }

@@ -16,9 +16,9 @@ interface Props {
 
 const toolItems = [
   { id: 'cursor', icon: cursorSVG, title: 'Cursor' },
+  { id: 'eraser', icon: eraserSVG, title: 'Eraser' },
   { id: 'brush', icon: brushSVG, title: 'Brush' },
-  { id: 'rectangle', icon: rectangleSVG, title: 'Rectangle' },
-  { id: 'eraser', icon: eraserSVG, title: 'Eraser' }
+  { id: 'rectangle', icon: rectangleSVG, title: 'Rectangle' }
 ]
 
 function Toolbar({ onSave }: Props) {

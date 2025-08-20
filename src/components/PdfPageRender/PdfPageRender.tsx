@@ -3,7 +3,7 @@ import React, { useCallback, useContext, useEffect, useRef } from 'react'
 import * as fabric from 'fabric'
 import { ToolContext } from '@/pages/Viewer/context/ToolContext'
 import { mergeRectsIntoLines } from '@/tools/merge-horizontal-rect'
-import { crossBase64Image, eraserBase64Image } from './data/base64-image'
+import { crossBase64Image, pointerBase64Image } from './data/base64-image'
 import type { Annotation } from '@/types/annotation'
 
 interface Props {
@@ -536,9 +536,9 @@ function PdfPageRender({
       fabricCanvas.current.defaultCursor = `url(${crossBase64Image}) 8 8, auto`
     }
 
-    if (toolCtx?.currentTool.id === 'eraser') {
-      fabricCanvas.current.hoverCursor = `url(${eraserBase64Image}) 8 8, auto`
-      fabricCanvas.current.defaultCursor = `url(${eraserBase64Image}) 8 8, auto`
+    if (toolCtx?.currentTool.id === 'pointer') {
+      fabricCanvas.current.hoverCursor = `url(${pointerBase64Image}) 8 8, auto`
+      fabricCanvas.current.defaultCursor = `url(${pointerBase64Image}) 8 8, auto`
     }
   }, [toolCtx?.currentTool, setFabricCanvasPointerEvents, textDiv.classList])
 

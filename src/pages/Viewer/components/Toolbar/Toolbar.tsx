@@ -7,8 +7,8 @@ import { Divider } from '@arco-design/web-react'
 import { Fragment, useContext, useState } from 'react'
 import Palette from './Palette'
 import OtherActions from './OtherActions'
-import eraserSVG from '@/assets/svg/eraser.svg'
 import { ToolContext } from '../../context/ToolContext'
+import pointerSVG from '@/assets/svg/pointer.svg'
 
 interface Props {
   onSave: () => void
@@ -16,7 +16,7 @@ interface Props {
 
 const toolItems = [
   { id: 'cursor', icon: cursorSVG, title: 'Cursor' },
-  { id: 'eraser', icon: eraserSVG, title: 'Eraser' },
+  { id: 'pointer', icon: pointerSVG, title: 'Pointer' },
   { id: 'brush', icon: brushSVG, title: 'Brush' },
   { id: 'rectangle', icon: rectangleSVG, title: 'Rectangle' }
 ]

@@ -1,19 +1,15 @@
 import { IconRight } from '@arco-design/web-react/icon'
 import styles from './styles/preset-comment.module.scss'
 import type React from 'react'
-import type { Annotation } from '@/types/annotation'
+import type { OnePageAnnotationItem } from '@/types/annotation'
 
 interface Props {
-  focusedAnnotation: Annotation | null
-  setFocusedAnnotation: React.Dispatch<React.SetStateAction<Annotation | null>>
+  focusedAnnotation: OnePageAnnotationItem | null
+  setFocusedAnnotation: React.Dispatch<React.SetStateAction<OnePageAnnotationItem | null>>
   setShowPresetComment: React.Dispatch<React.SetStateAction<boolean>>
 }
 
-function PresetComment({
-  focusedAnnotation,
-  setFocusedAnnotation,
-  setShowPresetComment
-}: Props) {
+function PresetComment({ focusedAnnotation, setFocusedAnnotation, setShowPresetComment }: Props) {
   const presetComments = [
     {
       annotationRuleId: 1,
@@ -25,15 +21,16 @@ function PresetComment({
     },
     {
       annotationRuleId: 3,
-      comment: '王源，伯克利KTV音乐才子，国服牛叫第一人，素有中国天籁牛嗓之称~'
+      comment: '王源,伯克利KTV音乐才子,国服牛叫第一人,素有中国天籁牛嗓之称~'
     }
   ]
 
-  const handleCommentClick = (comment: string) => {
+  const handleCommentClick = (presetComment: { annotationRuleId: number; comment: string }) => {
     const newAnnotation = {
       ...focusedAnnotation!
     }
-    newAnnotation.group![0].comment!.text = comment
+    newAnnotation.annotationRuleId = presetComment.annotationRuleId
+    newAnnotation.commentText = presetComment.comment
     setFocusedAnnotation(newAnnotation)
     setShowPresetComment(false)
   }
@@ -57,11 +54,11 @@ function PresetComment({
           {presetComments.map((pre, preIndex) => {
             return (
               <li
-                key={pre.annotationRuleId}
+                key={preIndex}
                 className={styles.commentItem}
               >
                 <span>{pre.comment}</span>
-                <span onClick={() => handleCommentClick(pre.comment)}>🆗</span>
+                <span onClick={() => handleCommentClick(pre)}>🆗</span>
               </li>
             )
           })}

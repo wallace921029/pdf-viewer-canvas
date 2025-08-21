@@ -9,7 +9,7 @@ import { useEffect, useState } from 'react'
 import PdfPageRender from '@/components/PdfPageRender/PdfPageRender'
 import demoFile from '@/assets/冯少桐-07班-循环和呼吸功能调节综合实验.pdf?url'
 import type { PageLayer } from './types'
-import type { Annotation } from '@/types/annotation'
+import type { OnePageAnnotations, OnePageAnnotationItem } from '@/types/annotation'
 import PresetComment from './components/PresetComment/PresetComment'
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = workerUrl
@@ -19,64 +19,10 @@ function Viewer() {
 
   const [viewSize, setViewSize] = useState({ width: 0, height: 0 })
   const [pageLayers, setPageLayers] = useState<PageLayer[]>([])
-  const [annotationData, setAnnotationData] = useState<Annotation[][]>([
-    [
-      {
-        id: 1755168610666,
-        selectedText: '制解析',
-        group: [
-          {
-            type: 'rect',
-            options: {
-              left: 427.03761291503906,
-              top: 595.7291870117188,
-              fill: 'rgba(255, 0, 0, .3)',
-              width: 48.6417236328125,
-              height: 18,
-              hasControls: false
-            },
-            comment: {
-              annotationRuleId: 100,
-              text: '你这中水平好意思毕业？你在外面别说我是你的导师。'
-            }
-          }
-        ]
-      },
-      {
-        id: Date.now(),
-        selectedText: '家兔气管插管',
-        group: [
-          {
-            type: 'rect',
-            options: {
-              left: 483.79754638671875 * 1.5,
-              top: 397.57733154296875 * 1.5,
-              fill: 'rgba(148, 0, 211, .3)',
-              width: 21.188995361328125 * 1.5,
-              height: 10.5 * 1.5
-            },
-            comment: {
-              annotationRuleId: 101,
-              text: '你在干嘛？'
-            }
-          },
-          {
-            type: 'rect',
-            options: {
-              left: 90.0999984741211 * 1.5,
-              top: 420.9773254394531 * 1.5,
-              fill: 'rgba(148, 0, 211, .3)',
-              width: 42.37899835205078 * 1.5,
-              height: 10.5 * 1.5
-            }
-          }
-        ]
-      }
-    ]
-  ])
+  const [allPageAnnotations, setAllPageAnnotations] = useState<OnePageAnnotations[]>([])
 
   const handleSave = () => {
-    console.log('> annotationData', annotationData)
+    console.log('> allPageAnnotations', allPageAnnotations)
   }
 
   // load PDF content and render pages
@@ -124,9 +70,74 @@ function Viewer() {
         imageCanvas: pageImageCanvas,
         textDiv: pageTextDiv
       })
+
+      const onePageAnnotations = {
+        pageNum: pageNum - 1,
+        annotations: []
+      }
+
+      setAllPageAnnotations((prev) => [...prev, onePageAnnotations])
     }
 
     setPageLayers(tempPageLayers)
+
+    // FIXME mock data
+    setAllPageAnnotations((prev) => {
+      const updatedValue = [...prev]
+      updatedValue[0] = {
+        pageNum: 0,
+        annotations: [
+          {
+            uniqueId: 1755168610666,
+            selectedText: '制解析',
+            annotationRuleId: 100,
+            commentText: '你这中水平好意思毕业？你在外面别说我是你的导师。',
+            group: [
+              {
+                type: 'rect',
+                options: {
+                  left: 427.03761291503906,
+                  top: 595.7291870117188,
+                  fill: 'rgba(255, 0, 0, .3)',
+                  width: 48.6417236328125,
+                  height: 18,
+                  hasControls: false
+                }
+              }
+            ]
+          },
+          {
+            uniqueId: 1755168610667,
+            selectedText: '家兔气管插管',
+            annotationRuleId: 101,
+            commentText: '你在干嘛？',
+            group: [
+              {
+                type: 'rect',
+                options: {
+                  left: 483.79754638671875 * 1.5,
+                  top: 397.57733154296875 * 1.5,
+                  fill: 'rgba(148, 0, 211, .3)',
+                  width: 21.188995361328125 * 1.5,
+                  height: 10.5 * 1.5
+                }
+              },
+              {
+                type: 'rect',
+                options: {
+                  left: 90.0999984741211 * 1.5,
+                  top: 420.9773254394531 * 1.5,
+                  fill: 'rgba(148, 0, 211, .3)',
+                  width: 42.37899835205078 * 1.5,
+                  height: 10.5 * 1.5
+                }
+              }
+            ]
+          }
+        ]
+      }
+      return updatedValue
+    })
   }
 
   useEffect(() => {
@@ -136,11 +147,26 @@ function Viewer() {
     })
   }, [fileUrl])
 
-  // show preset comment
+  /**
+   * comment panel and annotation synchronization
+   */
   const [showPresetComment, setShowPresetComment] = useState(false)
-  const [focusedAnnotation, setFocusedAnnotation] = useState<Annotation | null>(
-    null
-  )
+  const [focusedAnnotation, setFocusedAnnotation] = useState<OnePageAnnotationItem | null>(null)
+
+  useEffect(() => {
+    setAllPageAnnotations((prev) => {
+      const updatedValue = [...prev]
+      updatedValue.forEach((item) => {
+        item.annotations.forEach((ann, annIndex) => {
+          if (ann.uniqueId === focusedAnnotation?.uniqueId) {
+            console.log(item.pageNum, annIndex)
+            updatedValue[item.pageNum].annotations[annIndex] = focusedAnnotation
+          }
+        })
+      })
+      return updatedValue
+    })
+  }, [focusedAnnotation])
 
   return (
     <div className={`${styles.viewer}`}>
@@ -163,12 +189,16 @@ function Viewer() {
               viewSize={viewSize}
               imageCanvas={pageLayer.imageCanvas}
               textDiv={pageLayer.textDiv}
-              annotationData={annotationData[pageLayerIndex] || []}
-              setAnnotationData={(newAnnotationData) => {
-                setAnnotationData((prev) => {
-                  const updated = [...prev]
-                  updated[pageLayerIndex] = newAnnotationData
-                  return updated
+              currentPageAnnotations={allPageAnnotations[pageLayerIndex]}
+              syncToAllPageAnnotations={(currentPageAnnotations) => {
+                setAllPageAnnotations((prev) => {
+                  const updatedValue = [...prev]
+                  updatedValue.forEach((item) => {
+                    if (item.pageNum === currentPageAnnotations.pageNum) {
+                      item.annotations = currentPageAnnotations.annotations
+                    }
+                  })
+                  return updatedValue
                 })
               }}
               setShowPresetComment={setShowPresetComment}

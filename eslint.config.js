@@ -33,7 +33,8 @@ export default tseslint.config([
         'error',
         {
           endOfLine: 'auto',
-          singleAttributePerLine: true
+          singleAttributePerLine: true,
+          printWidth: 120
         }
       ]
     }

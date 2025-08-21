@@ -1,23 +1,35 @@
-export interface FabricElement {
-  type: 'rect' | string // 目前例子里是 rect，可扩展
-  options: {
-    left: number
-    top: number
-    width: number
-    height: number
-    fill?: string
-    hasControls?: boolean
-    // 可根据需求继续扩展 Fabric 对象属性
-  }
-  comment?: {
-    annotationRuleId: number | string
-    text: string
-  }
+export interface PdfAnnotations {
+  reportId: number
+  classId: number
+  studentId: number
+  operatorId: number
+  createTime: string
+  updateTime: string
+  data: OnePageAnnotations[]
 }
 
-// 每个 annotation 类型
-export interface Annotation {
-  id: number
+export interface OnePageAnnotations {
+  pageNum: number
+  annotations: OnePageAnnotationItem[]
+}
+
+export interface OnePageAnnotationItem {
+  uniqueId: number
+  annotationRuleId: number | string
   selectedText: string
-  group: FabricElement[]
+  commentText: string
+  group: Group[]
+}
+
+export interface Group {
+  type: 'rect' | string
+  options: RectOptions | Record<string, any>
+}
+
+export interface RectOptions {
+  left: number
+  top: number
+  fill: string
+  width: number
+  height: number
 }

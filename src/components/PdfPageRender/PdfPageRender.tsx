@@ -4,24 +4,24 @@ import * as fabric from 'fabric'
 import { ToolContext } from '@/pages/Viewer/context/ToolContext'
 import { mergeRectsIntoLines } from '@/tools/merge-horizontal-rect'
 import { crossBase64Image, pointerBase64Image } from './data/base64-image'
-import type { Annotation } from '@/types/annotation'
+import type { OnePageAnnotations, OnePageAnnotationItem } from '@/types/annotation'
 
 interface Props {
   viewSize: { width: number; height: number }
   imageCanvas: HTMLCanvasElement
   textDiv: HTMLDivElement
-  annotationData: Annotation[]
-  setAnnotationData: (value: Annotation[]) => void
+  currentPageAnnotations: OnePageAnnotations
+  syncToAllPageAnnotations: (value: OnePageAnnotations) => void
   setShowPresetComment: React.Dispatch<React.SetStateAction<boolean>>
-  setFocusedAnnotation: React.Dispatch<React.SetStateAction<Annotation | null>>
+  setFocusedAnnotation: React.Dispatch<React.SetStateAction<OnePageAnnotationItem | null>>
 }
 
 function PdfPageRender({
   viewSize,
   imageCanvas,
   textDiv,
-  annotationData,
-  setAnnotationData,
+  currentPageAnnotations,
+  syncToAllPageAnnotations,
   setShowPresetComment,
   setFocusedAnnotation
 }: Props) {
@@ -51,11 +51,7 @@ function PdfPageRender({
 
     fabricCanvas.current?.clear()
 
-    const getYPosition = (
-      target: fabric.Object,
-      labelLeft: number,
-      labelHeight: number
-    ): { y: number } => {
+    const getYPosition = (target: fabric.Object, labelLeft: number, labelHeight: number): { y: number } => {
       if (!fabricCanvas.current) return { y: 0 }
 
       const gap = 5
@@ -75,10 +71,7 @@ function PdfPageRender({
 
       // Helper function to check if a position overlaps with any existing label
       const hasOverlap = (y: number): boolean => {
-        return labelsAtSameLeft.some(
-          (bbox) =>
-            y < bbox.top + bbox.height + gap && y + labelHeight + gap > bbox.top
-        )
+        return labelsAtSameLeft.some((bbox) => y < bbox.top + bbox.height + gap && y + labelHeight + gap > bbox.top)
       }
 
       // Helper function to find available positions
@@ -130,8 +123,7 @@ function PdfPageRender({
       if (availablePositions.length === 0) {
         // Fallback: place at the bottom of all existing labels
         const lowestLabel = labelsAtSameLeft.reduce(
-          (lowest, bbox) =>
-            bbox.top + bbox.height > lowest ? bbox.top + bbox.height : lowest,
+          (lowest, bbox) => (bbox.top + bbox.height > lowest ? bbox.top + bbox.height : lowest),
           targetTop
         )
         return { y: lowestLabel + gap }
@@ -197,15 +189,17 @@ function PdfPageRender({
       label.on('moving', updateLine)
     }
 
-    annotationData.forEach((annotation) => {
-      annotation.group.forEach((item) => {
-        if (item.type === 'rect') {
+    currentPageAnnotations.annotations.forEach((annotation) => {
+      let theFirstElementInTheGroup: fabric.FabricObject | null = null
+
+      annotation.group.forEach((ann, annIndex) => {
+        if (ann.type === 'rect') {
           const rect = new fabric.Rect({
-            left: item.options.left,
-            top: item.options.top,
-            fill: item.options.fill,
-            width: item.options.width,
-            height: item.options.height,
+            left: ann.options.left,
+            top: ann.options.top,
+            fill: ann.options.fill,
+            width: ann.options.width,
+            height: ann.options.height,
             hasControls: false,
             lockMovementX: true,
             lockMovementY: true,
@@ -213,6 +207,12 @@ function PdfPageRender({
               ...annotation
             }
           })
+
+          // Set element to the first annotation's rectangle
+          if (annIndex === 0) {
+            theFirstElementInTheGroup = rect
+          }
+
           const { x, y } = rect.getCoords()[1]
           const commentIcon = new fabric.FabricText('💬', {
             left: x - 40,
@@ -234,82 +234,44 @@ function PdfPageRender({
           })
 
           commentIcon.on('mousedown', () => {
-            const targetAnnotation = annotationData.find(
-              (ann) => ann.id === annotation.id
+            const targetAnnotation = currentPageAnnotations.annotations.find(
+              (ann) => ann.uniqueId === annotation.uniqueId
             )
             if (!targetAnnotation) return
-
-            const target = targetAnnotation.group?.[0]
-            if (!target) return
-
-            if (!target.comment) {
-              target.comment = {
-                annotationRuleId: '',
-                text: ''
-              }
-            }
 
             setFocusedAnnotation(targetAnnotation)
             setShowPresetComment(true)
 
-            if (targetAnnotation.group[0].comment!.text) {
-              targetAnnotation.group[0].comment = {
-                annotationRuleId: '',
-                text: ''
-              }
+            if (targetAnnotation.commentText) {
+              targetAnnotation.annotationRuleId = ''
+              targetAnnotation.commentText = ''
             }
 
-            setAnnotationData([...annotationData])
+            syncToAllPageAnnotations({ ...currentPageAnnotations })
             fabricCanvas.current?.renderAll()
           })
 
           // delete annotation
           deleteIcon.on('mousedown', () => {
-            const targetAnnotation = annotationData.find(
-              (ann) => ann.id === annotation.id
+            const targetAnnotation = currentPageAnnotations.annotations.find(
+              (ann) => ann.uniqueId === annotation.uniqueId
             )
             if (!targetAnnotation) return
 
-            const newAnnotationData = annotationData.filter(
-              (ann) => ann.id !== targetAnnotation.id
+            const filteredAnnotations = currentPageAnnotations.annotations.filter(
+              (ann) => ann.uniqueId !== targetAnnotation.uniqueId
             )
-            setAnnotationData([...newAnnotationData])
+            const newCurrentPageAnnotations = {
+              ...currentPageAnnotations,
+              annotations: filteredAnnotations
+            }
+            syncToAllPageAnnotations({ ...newCurrentPageAnnotations })
             fabricCanvas.current?.renderAll()
           })
 
           fabricCanvas.current?.add(rect)
           fabricCanvas.current?.add(commentIcon)
           fabricCanvas.current?.add(deleteIcon)
-
-          // render comment
-          if (item.comment && item.comment.text) {
-            const labelWidth = 120
-            const labelLeft = viewSize.width - 130
-            const tempLabel = new fabric.Textbox(item.comment.text, {
-              width: labelWidth,
-              fontSize: 12,
-              splitByGrapheme: true,
-              textAlign: 'justify-left'
-            })
-            const tempLabelHeight = tempLabel.getBoundingRect().height
-            const { y } = getYPosition(rect, labelLeft, tempLabelHeight)
-            const label = new fabric.Textbox(item.comment.text, {
-              top: y,
-              left: labelLeft,
-              width: labelWidth,
-              fontSize: 12,
-              fill: 'red',
-              splitByGrapheme: true,
-              textAlign: 'justify-left',
-              lockMovementX: true,
-              lockMovementY: true,
-              hasControls: false,
-              editable: false
-            })
-
-            fabricCanvas.current!.add(label)
-            connectLabel(rect, label)
-          }
 
           rect.on('selected', () => {
             commentIcon.set({
@@ -334,16 +296,40 @@ function PdfPageRender({
           })
         }
       })
+
+      // render comment
+      if (theFirstElementInTheGroup && annotation.commentText) {
+        const labelWidth = 120
+        const labelLeft = viewSize.width - 130
+        const tempLabel = new fabric.Textbox(annotation.commentText, {
+          width: labelWidth,
+          fontSize: 12,
+          splitByGrapheme: true,
+          textAlign: 'justify-left'
+        })
+        const tempLabelHeight = tempLabel.getBoundingRect().height
+        const { y } = getYPosition(theFirstElementInTheGroup, labelLeft, tempLabelHeight)
+        const label = new fabric.Textbox(annotation.commentText, {
+          top: y,
+          left: labelLeft,
+          width: labelWidth,
+          fontSize: 12,
+          fill: 'red',
+          splitByGrapheme: true,
+          textAlign: 'justify-left',
+          lockMovementX: true,
+          lockMovementY: true,
+          hasControls: false,
+          editable: false
+        })
+
+        fabricCanvas.current!.add(label)
+        connectLabel(theFirstElementInTheGroup, label)
+      }
     })
 
     fabricCanvas.current?.renderAll()
-  }, [
-    annotationData,
-    setAnnotationData,
-    setFocusedAnnotation,
-    setShowPresetComment,
-    viewSize.width
-  ])
+  }, [currentPageAnnotations, syncToAllPageAnnotations, setFocusedAnnotation, setShowPresetComment, viewSize.width])
 
   /** Text selection */
   const handleTextSelectionMouseUp = useCallback(
@@ -413,8 +399,10 @@ function PdfPageRender({
       // 11. 输出或使用结果
       const mergedLines = mergeRectsIntoLines(linesInfo, 5)
       const newAnn = {
-        id: Date.now(),
+        uniqueId: Date.now(),
         selectedText,
+        annotationRuleId: '',
+        commentText: '',
         group: mergedLines.map((line) => {
           console.log('toolCtx.currentTool.color', toolCtx.currentTool.color)
           return {
@@ -426,24 +414,25 @@ function PdfPageRender({
               width: line.width,
               height: line.height,
               hasControls: false
-            },
-            comment: {
-              annotationRuleId: '',
-              text: ''
             }
           }
         })
       }
 
-      setAnnotationData([...annotationData, newAnn])
+      const updatedCurrentPageAnnotations = {
+        ...currentPageAnnotations,
+        annotations: [...currentPageAnnotations.annotations, newAnn]
+      }
+
+      syncToAllPageAnnotations(updatedCurrentPageAnnotations)
       setFocusedAnnotation(newAnn)
       setShowPresetComment(true)
       // clear the text selection
       selection.removeAllRanges()
     },
     [
-      annotationData,
-      setAnnotationData,
+      currentPageAnnotations,
+      syncToAllPageAnnotations,
       setFocusedAnnotation,
       setShowPresetComment,
       textDiv,
@@ -507,10 +496,7 @@ function PdfPageRender({
   useEffect(() => {
     if (!fabricCanvas.current) return
 
-    if (
-      toolCtx?.currentTool.id === 'cursor'
-      || toolCtx?.currentTool.id === 'brush'
-    ) {
+    if (toolCtx?.currentTool.id === 'cursor' || toolCtx?.currentTool.id === 'brush') {
       setFabricCanvasPointerEvents('none')
     } else {
       setFabricCanvasPointerEvents('auto')
